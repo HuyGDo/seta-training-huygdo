@@ -1,0 +1,1 @@
+{"level":"fatal","msg":"could not connect to database: failed to connect to database: failed to connect to `user=seta_user database=seta_db`: 172.18.0.2:5432 (db): dial error: dial tcp 172.18.0.2:5432: connect: connection refused","time":"2025-07-31T05:01:00Z"}

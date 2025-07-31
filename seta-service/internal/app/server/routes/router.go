@@ -6,15 +6,24 @@ import (
 	"seta/internal/app/server/middlewares"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 // SetupRouter initializes the Gin router and sets up the routes.
-func SetupRouter(db *gorm.DB) *gin.Engine {
+func SetupRouter(db *gorm.DB, log *logrus.Logger) *gin.Engine {
 	r := gin.Default()
 
+	// Add Prometheus middleware to all routes
+	r.Use(middlewares.PrometheusMiddleware())
+	r.Use(middlewares.ErrorHandler())
+
+	// Add Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// GraphQL endpoint
-	r.POST("/graphql", graphql.GraphQLHandler(db))
+	r.POST("/graphql", graphql.GraphQLHandler(db, log))
 	r.GET("/", graphql.PlaygroundHandler())
 
 	// REST endpoints for team and asset management

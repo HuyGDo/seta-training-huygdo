@@ -6,13 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 // GraphQLHandler creates a gin handler for GraphQL requests.
-func GraphQLHandler(db *gorm.DB) gin.HandlerFunc {
+func GraphQLHandler(db *gorm.DB, log *logrus.Logger) gin.HandlerFunc {
 	opts := []graphql.SchemaOpt{graphql.UseFieldResolvers()}
-	schema := graphql.MustParseSchema(SchemaString, NewResolver(db), opts...)
+	schema := graphql.MustParseSchema(SchemaString, NewResolver(db, log), opts...)
 	handler := &relay.Handler{Schema: schema}
 
 	return func(c *gin.Context) {
