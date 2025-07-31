@@ -10,7 +10,8 @@ services:
     environment:
       - DATABASE_URL=postgres://seta_user:seta_password@db:5432/seta_db?sslmode=disable
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:13-alpine
@@ -22,6 +23,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seta_user -d seta_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:v2.47.2

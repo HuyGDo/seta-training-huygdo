@@ -1,1 +1,6 @@
 {"level":"fatal","msg":"could not connect to database: failed to connect to database: failed to connect to `user=seta_user database=seta_db`: 172.18.0.2:5432 (db): dial error: dial tcp 172.18.0.2:5432: connect: connection refused","time":"2025-07-31T05:01:00Z"}
+{"level":"info","msg":"Database connection successful.","time":"2025-07-31T05:04:57Z"}
+{"level":"info","msg":"Starting server on port 8080","time":"2025-07-31T05:04:57Z"}
+{"email":"test@test.com","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","level":"error","msg":"Failed to find user by email","time":"2025-07-31T05:06:13Z"}
+{"level":"info","msg":"Database connection successful.","time":"2025-07-31T05:15:36Z"}
+{"level":"info","msg":"Starting server on port 8080","time":"2025-07-31T05:15:36Z"}

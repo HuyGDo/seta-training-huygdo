@@ -6,6 +6,7 @@ datasources:
     access: proxy
     url: http://loki:3100
     isDefault: true
+    uid: ab7e152f-95e7-454e-9285-65da8d67a3d2
   - name: Prometheus
     type: prometheus
     access: proxy
