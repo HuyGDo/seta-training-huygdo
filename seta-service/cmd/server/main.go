@@ -17,7 +17,7 @@ func main() {
 	// Connect to the database
 	db, err := database.Connect(log)
 	if err != nil {
-		log.Fatalf("could not connect to database: %v", err)
+		log.Fatal().Err(err).Msg("could not connect to database")
 	}
 
 	// Set up the router
@@ -25,8 +25,8 @@ func main() {
 
 	// Start the server
 	// add graceful shutdown
-	log.Info("Starting server on port 8080")
+	log.Info().Msg("Starting server on port 8080")
 	if err := router.Run(":8080"); err != nil {
-		log.Fatalf("could not start server: %v", err)
+		log.Fatal().Err(err).Msg("could not start server")
 	}
 }

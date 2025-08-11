@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -16,11 +16,11 @@ import (
 // Resolver contains the database connection for GraphQL resolvers.
 type Resolver struct {
 	db  *gorm.DB
-	log *logrus.Logger
+	log *zerolog.Logger
 }
 
 // NewResolver creates a new Resolver.
-func NewResolver(db *gorm.DB, log *logrus.Logger) *Resolver {
+func NewResolver(db *gorm.DB, log *zerolog.Logger) *Resolver {
 	return &Resolver{db: db, log: log}
 }
 
@@ -68,26 +68,18 @@ func (r *Resolver) Login(ctx context.Context, args struct {
 }) (*AuthPayloadResolver, error) {
 	var user models.User
 	if err := r.db.Where("email = ?", args.Email).First(&user).Error; err != nil {
-		r.log.WithFields(logrus.Fields{
-			"email": args.Email,
-			"error": err.Error(),
-		}).Error("Failed to find user by email")
+		r.log.Error().Err(err).Str("email", args.Email).Msg("Failed to find user by email")
 		return nil, errors.New("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(args.Password)); err != nil {
-		r.log.WithFields(logrus.Fields{
-			"email": args.Email,
-		}).Error("Invalid password")
+		r.log.Error().Str("email", args.Email).Msg("Invalid password")
 		return nil, errors.New("invalid credentials")
 	}
 
 	token, err := auth.GenerateToken(&user)
 	if err != nil {
-		r.log.WithFields(logrus.Fields{
-			"user_id": user.ID,
-			"error":   err.Error(),
-		}).Error("Failed to generate token")
+		r.log.Error().Err(err).Str("user_id", user.ID.String()).Msg("Failed to generate token")
 		return nil, err
 	}
 

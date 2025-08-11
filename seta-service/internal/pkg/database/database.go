@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 // Connect connects to the database and returns a GORM DB instance.
-func Connect(log *logrus.Logger) (*gorm.DB, error) {
+func Connect(log *zerolog.Logger) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 
 	// close connection when shutdown application
@@ -19,6 +19,6 @@ func Connect(log *logrus.Logger) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	log.Info("Database connection successful.")
+	log.Info().Msg("Database connection successful.")
 	return db, nil
 }

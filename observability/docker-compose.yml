@@ -1,5 +1,12 @@
 version: '3.8'
 
+networks:
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.238.0/24
+
 services:
   app:
     build: ../seta-service
@@ -12,6 +19,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - monitoring
 
   db:
     image: postgres:13-alpine
@@ -28,6 +37,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - monitoring
 
   prometheus:
     image: prom/prometheus:v2.47.2
@@ -37,15 +48,21 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - monitoring
 
   loki:
     image: grafana/loki:2.9.2
     ports:
       - "3100:3100"
     volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
-    user: "10001:10001" # Run as the loki user
+    working_dir: /loki
+    networks:
+      monitoring:
+        ipv4_address: 172.16.238.10
 
   promtail:
     image: grafana/promtail:2.9.2
@@ -53,6 +70,8 @@ services:
       - ../seta-service/logs:/var/log
       - ./promtail-config.yml:/etc/promtail/config.yaml
     command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - monitoring
 
   grafana:
     image: grafana/grafana:10.1.5
@@ -60,7 +79,10 @@ services:
       - "3000:3000"
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
-
+    networks:
+      - monitoring
+    depends_on:
+      - loki
 volumes:
   loki-data:
   postgres_data:

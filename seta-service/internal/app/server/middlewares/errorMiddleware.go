@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 // CustomError represents a custom error structure.
@@ -24,6 +25,9 @@ func ErrorHandler() gin.HandlerFunc {
 		// This part executes after the handler
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last().Err
+
+			// Log the error
+			log.Error().Err(err).Msg("An error occurred")
 
 			// Check for our custom error type
 			if appErr, ok := err.(*CustomError); ok {

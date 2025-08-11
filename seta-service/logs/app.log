@@ -1,6 +1,35 @@
-{"level":"fatal","msg":"could not connect to database: failed to connect to database: failed to connect to `user=seta_user database=seta_db`: 172.18.0.2:5432 (db): dial error: dial tcp 172.18.0.2:5432: connect: connection refused","time":"2025-07-31T05:01:00Z"}
-{"level":"info","msg":"Database connection successful.","time":"2025-07-31T05:04:57Z"}
-{"level":"info","msg":"Starting server on port 8080","time":"2025-07-31T05:04:57Z"}
-{"email":"test@test.com","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","level":"error","msg":"Failed to find user by email","time":"2025-07-31T05:06:13Z"}
-{"level":"info","msg":"Database connection successful.","time":"2025-07-31T05:15:36Z"}
-{"level":"info","msg":"Starting server on port 8080","time":"2025-07-31T05:15:36Z"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T05:44:44Z","message":"Failed to find user by email"}
+{"level":"fatal","error":"failed to connect to database: failed to connect to `user=huygdo database=personnel`:\n\t127.0.0.1:5432 (localhost): dial error: dial tcp 127.0.0.1:5432: connect: connection refused\n\t[::1]:5432 (localhost): dial error: dial tcp [::1]:5432: connect: connection refused","time":"2025-07-31T05:45:59Z","message":"could not connect to database"}
+{"level":"fatal","error":"failed to connect to database: failed to connect to `user=huygdo database=personnel`:\n\t127.0.0.1:5432 (localhost): dial error: dial tcp 127.0.0.1:5432: connect: connection refused\n\t[::1]:5432 (localhost): dial error: dial tcp [::1]:5432: connect: connection refused","time":"2025-07-31T05:48:19Z","message":"could not connect to database"}
+{"level":"info","time":"2025-07-31T05:52:57Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T05:52:57Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T06:42:34Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T06:42:34Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T07:52:11Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T07:52:11Z","message":"Starting server on port 8080"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T07:57:54Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T07:58:43Z","message":"Failed to find user by email"}
+{"level":"info","time":"2025-07-31T08:03:18Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:03:18Z","message":"Starting server on port 8080"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:03:35Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:04:08Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:04:10Z","message":"Failed to find user by email"}
+{"level":"info","time":"2025-07-31T08:05:55Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:05:55Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T08:23:28Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:23:28Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T08:29:20Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:29:20Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T08:31:44Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:31:44Z","message":"Starting server on port 8080"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:33:14Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:33:26Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:33:27Z","message":"Failed to find user by email"}
+{"level":"info","time":"2025-07-31T08:39:19Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T08:39:19Z","message":"Starting server on port 8080"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:43:44Z","message":"Failed to find user by email"}
+{"level":"error","error":"ERROR: relation \"users\" does not exist (SQLSTATE 42P01)","email":"test@test.com","time":"2025-07-31T08:43:45Z","message":"Failed to find user by email"}
+{"level":"info","time":"2025-07-31T09:07:09Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T09:07:09Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-07-31T09:29:57Z","message":"Database connection successful."}
+{"level":"info","time":"2025-07-31T09:29:57Z","message":"Starting server on port 8080"}

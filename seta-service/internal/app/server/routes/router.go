@@ -7,12 +7,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
 // SetupRouter initializes the Gin router and sets up the routes.
-func SetupRouter(db *gorm.DB, log *logrus.Logger) *gin.Engine {
+func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
 	r := gin.Default()
 
 	// Add Prometheus middleware to all routes
