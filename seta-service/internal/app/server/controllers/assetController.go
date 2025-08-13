@@ -6,7 +6,7 @@ import (
 
 	"seta/internal/pkg/models"
 
-	"seta/internal/app/server/middlewares"
+	"seta/internal/pkg/errorHandling"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -35,7 +35,7 @@ type CreateFolderInput struct {
 func (ac *AssetController) CreateFolder(c *gin.Context) {
 	var input CreateFolderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
@@ -46,7 +46,7 @@ func (ac *AssetController) CreateFolder(c *gin.Context) {
 	}
 
 	if err := ac.db.Create(&folder).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create folder"})
 		return
 	}
 
@@ -59,7 +59,7 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 	var folder models.Folder
 
 	if err := ac.db.First(&folder, folderID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
@@ -68,7 +68,7 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 		// Check if the folder is shared with the user
 		var share models.FolderShare
 		if err := ac.db.Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
-			_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this folder"})
+			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this folder"})
 			return
 		}
 	}
@@ -86,30 +86,30 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 	var folder models.Folder
 
 	if err := ac.db.First(&folder, folderID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
 	// Check if the user is the owner of the folder
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if folder.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this folder"})
 		return
 	}
 
 	var input UpdateFolderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
 	if err := ac.db.Model(&folder).Update("name", input.Name).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update folder"})
 		return
 	}
 
@@ -122,19 +122,19 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	var folder models.Folder
 
 	if err := ac.db.First(&folder, folderID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
 	// Check if the user is the owner of the folder
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if folder.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this folder"})
 		return
 	}
 
@@ -142,7 +142,7 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	ac.db.Where("folder_id = ?", folder.FolderID).Delete(&models.Note{})
 	ac.db.Where("folder_id = ?", folder.FolderID).Delete(&models.FolderShare{})
 	if err := ac.db.Delete(&folder).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete folder"})
 		return
 	}
 
@@ -160,25 +160,25 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 	var folder models.Folder
 
 	if err := ac.db.First(&folder, folderID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
 	// Check if the user is the owner of the folder
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if folder.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this folder"})
 		return
 	}
 
 	var input ShareFolderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
@@ -189,7 +189,7 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 	}
 
 	if err := ac.db.Create(&share).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share folder"})
 		return
 	}
 
@@ -206,7 +206,7 @@ type CreateNoteInput struct {
 func (ac *AssetController) CreateNote(c *gin.Context) {
 	var input CreateNoteInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
@@ -215,11 +215,11 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 	// Verify that the user has access to the folder
 	var folder models.Folder
 	if err := ac.db.First(&folder, input.FolderID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 	if folder.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to create a note in this folder"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to create a note in this folder"})
 		return
 	}
 
@@ -231,7 +231,7 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 	}
 
 	if err := ac.db.Create(&note).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create note"})
 		return
 	}
 
@@ -244,7 +244,7 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 	var note models.Note
 
 	if err := ac.db.First(&note, noteID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
@@ -253,7 +253,7 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 		// Check if the note is shared with the user
 		var share models.NoteShare
 		if err := ac.db.Where("note_id = ? AND user_id = ?", note.NoteID, userID).First(&share).Error; err != nil {
-			_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this note"})
+			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this note"})
 			return
 		}
 	}
@@ -272,30 +272,30 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 	var note models.Note
 
 	if err := ac.db.First(&note, noteID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
 	// Check if the user is the owner of the note
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if note.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this note"})
 		return
 	}
 
 	var input UpdateNoteInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
 	if err := ac.db.Model(&note).Updates(input).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update note"})
 		return
 	}
 
@@ -308,26 +308,26 @@ func (ac *AssetController) DeleteNote(c *gin.Context) {
 	var note models.Note
 
 	if err := ac.db.First(&note, noteID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
 	// Check if the user is the owner of the note
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if note.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this note"})
 		return
 	}
 
 	// Delete associated shares
 	ac.db.Where("note_id = ?", note.NoteID).Delete(&models.NoteShare{})
 	if err := ac.db.Delete(&note).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete note"})
 		return
 	}
 
@@ -345,25 +345,25 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 	var note models.Note
 
 	if err := ac.db.First(&note, noteID).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
 	// Check if the user is the owner of the note
 	userID, exists := c.Get("userID")
 	if !exists {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
 	if note.OwnerID != userID.(uint) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this note"})
 		return
 	}
 
 	var input ShareNoteInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
@@ -374,7 +374,7 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 	}
 
 	if err := ac.db.Create(&share).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share note"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share note"})
 		return
 	}
 
@@ -385,13 +385,13 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 func (ac *AssetController) GetUserAssets(c *gin.Context) {
 	targetUserID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
 	if err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusBadRequest, Message: "Invalid user ID"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid user ID"})
 		return
 	}
 
 	authUserID, _ := c.Get("userId")
 	if authUserID.(uint) != uint(targetUserID) {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view these assets"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view these assets"})
 		return
 	}
 
@@ -401,7 +401,7 @@ func (ac *AssetController) GetUserAssets(c *gin.Context) {
 		Where("folders.owner_id = ? OR folder_shares.user_id = ?", targetUserID, targetUserID).
 		Group("folders.folder_id").
 		Find(&folders).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve folders for the user"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve folders for the user"})
 		return
 	}
 
@@ -411,7 +411,7 @@ func (ac *AssetController) GetUserAssets(c *gin.Context) {
 		Where("notes.owner_id = ? OR note_shares.user_id = ?", targetUserID, targetUserID).
 		Group("notes.note_id").
 		Find(&notes).Error; err != nil {
-		_ = c.Error(&middlewares.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve notes for the user"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve notes for the user"})
 		return
 	}
 
