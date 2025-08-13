@@ -20,6 +20,13 @@ func main() {
 		log.Fatal().Err(err).Msg("could not connect to database")
 	}
 
+	sqlDB, err:= db.DB()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get database instance")
+	}
+
+	defer sqlDB.Close()
+
 	// Set up the router
 	router := routes.SetupRouter(db, log)
 
