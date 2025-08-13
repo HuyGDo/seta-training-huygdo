@@ -22,6 +22,36 @@ const roster = db.Roster;
 const resolvers = {
   DateTime: DateTimeResolver,
   Query: {
+    verifyToken: async (_, { token }) => {
+      try {
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const user = await db.User.findByPk(decoded.userId);
+
+        if (!user) {
+          return {
+            code: "404",
+            success: false,
+            message: "User not found",
+          };
+        }
+
+        const { password: _, ...safeUser } = user.get({ plain: true });
+
+        return {
+          code: "200",
+          success: true,
+          message: "Token is valid",
+          user: safeUser,
+        };
+      } catch (err) {
+        return {
+          code: "401",
+          success: false,
+          message: "Invalid or expired token",
+          errors: [err.message],
+        };
+      }
+    },
     users: async (_, { role }) => {
       return await user.findAll({
         where: { role },
@@ -220,8 +250,8 @@ const resolvers = {
         const isVerified = await bcrypt.compare(password, result.password);
 
         if (result && isVerified) {
-          const refreshToken = generateRefreshToken(result.userId);
-          const accessToken = generateAccessToken(result.userId);
+          const refreshToken = generateRefreshToken(result);
+          const accessToken = generateAccessToken(result);
           context.res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             sameSite: "lax", // in prod use "none"

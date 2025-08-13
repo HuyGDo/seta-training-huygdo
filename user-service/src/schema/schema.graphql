@@ -76,6 +76,7 @@ type Query {
   teams(userId: ID!): [Team!]!
   team(teamId: ID!): Team
   myTeams(userId: ID!): [Team!]!
+  verifyToken(token: String!): AuthMutationResponse!
 }
 
 type Mutation {

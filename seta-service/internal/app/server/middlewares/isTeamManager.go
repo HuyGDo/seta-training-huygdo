@@ -14,6 +14,7 @@ func IsTeamManager(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		teamIDStr := c.Param("teamId")
 		teamID, err := uuid.Parse(teamIDStr)
+
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid team ID"})
 			return
@@ -24,6 +25,7 @@ func IsTeamManager(db *gorm.DB) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "User ID not found in token"})
 			return
 		}
+		
 		userID, err := uuid.Parse(userIDStr.(string))
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user ID"})

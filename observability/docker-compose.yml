@@ -3,40 +3,35 @@ version: "3.8"
 networks:
   monitoring:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.16.238.0/24
 
 services:
-  app:
+  seta-service:
     build: ../seta-service
     ports:
       - "8080:8080"
     volumes:
       - ../seta-service/logs:/app/logs
     environment:
+      # adjust user/db name as needed for your local Postgres
       - DATABASE_URL=postgres://huygdo@host.docker.internal:5432/seta_service_db?sslmode=disable
-    depends_on:
-      db:
-        condition: service_healthy
+    # ensures host.docker.internal works on Linux (Docker 20.10+)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - monitoring
 
-  db:
-    image: postgres:13-alpine
-    environment:
-      - POSTGRES_USER=seta_user
-      - POSTGRES_PASSWORD=seta_password
-      - POSTGRES_DB=seta_db
+  user-service:
+    build: ../user-service
     ports:
-      - "5432:5432"
+      - "4000:4000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U seta_user -d seta_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ../user-service/logs:/app/logs
+    environment:
+      # adjust user/db name as needed for your local Postgres
+      - DATABASE_URL=postgres://huygdo@host.docker.internal:5432/user_service_db?sslmode=disable
+    # ensures host.docker.internal works on Linux (Docker 20.10+)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - monitoring
 
@@ -45,7 +40,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
     networks:
@@ -56,19 +51,19 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     working_dir: /loki
     networks:
-      monitoring:
-        ipv4_address: 172.16.238.10
+      - monitoring
 
   promtail:
     image: grafana/promtail:2.9.2
     volumes:
+      # shares the host logs dir with promtail
       - ../seta-service/logs:/var/log
-      - ./promtail-config.yml:/etc/promtail/config.yaml
+      - ./promtail-config.yml:/etc/promtail/config.yaml:ro
     command: -config.file=/etc/promtail/config.yaml
     networks:
       - monitoring
@@ -78,11 +73,13 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
-    networks:
-      - monitoring
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./provisioning:/etc/grafana/provisioning/dashboards:ro
+
     depends_on:
       - loki
+    networks:
+      - monitoring
+
 volumes:
   loki-data:
-  postgres_data:

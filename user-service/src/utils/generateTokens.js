@@ -8,14 +8,22 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
-export const generateAccessToken = (userId) => {
-  return jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: "30m",
-  });
+export const generateAccessToken = (user) => {
+  return jwt.sign(
+    { userId: user.userId, role: user.role },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: "30m",
+    }
+  );
 };
 
-export const generateRefreshToken = (userId) => {
-  return jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: "1d",
-  });
+export const generateRefreshToken = (user) => {
+  return jwt.sign(
+    { userId: user.userId, role: user.role },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: "1d",
+    }
+  );
 };
