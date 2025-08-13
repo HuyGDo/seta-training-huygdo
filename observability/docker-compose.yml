@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 networks:
   monitoring:
@@ -15,7 +15,7 @@ services:
     volumes:
       - ../seta-service/logs:/app/logs
     environment:
-      - DATABASE_URL=postgres://seta_user:seta_password@db:5432/seta_db?sslmode=disable
+      - DATABASE_URL=postgres://huygdo@host.docker.internal:5432/seta_service_db?sslmode=disable
     depends_on:
       db:
         condition: service_healthy
@@ -47,7 +47,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - "--config.file=/etc/prometheus/prometheus.yml"
     networks:
       - monitoring
 

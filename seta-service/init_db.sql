@@ -2,23 +2,6 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =================================================================
--- Table: users
--- Stores user account information and roles.
--- =================================================================
-CREATE TABLE users (
-    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('manager', 'member')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Add an index on the email column for faster lookups during login
-CREATE INDEX idx_users_email ON users(email);
-
--- =================================================================
 -- Table: teams
 -- Stores basic information about teams.
 -- =================================================================
@@ -37,8 +20,7 @@ CREATE TABLE team_managers (
     team_id UUID NOT NULL,
     user_id UUID NOT NULL,
     PRIMARY KEY (team_id, user_id),
-    FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
 );
 
 -- =================================================================
@@ -49,8 +31,7 @@ CREATE TABLE team_members (
     team_id UUID NOT NULL,
     user_id UUID NOT NULL,
     PRIMARY KEY (team_id, user_id),
-    FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
 );
 
 -- =================================================================
@@ -62,8 +43,7 @@ CREATE TABLE folders (
     folder_name VARCHAR(255) NOT NULL,
     owner_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Add an index on owner_id for faster lookups of a user's folders
@@ -81,8 +61,7 @@ CREATE TABLE notes (
     owner_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE,
-    FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
 );
 
 -- Add indexes for faster lookups
@@ -98,8 +77,7 @@ CREATE TABLE folder_shares (
     user_id UUID NOT NULL, -- The user the folder is shared WITH
     access_level VARCHAR(10) NOT NULL CHECK (access_level IN ('read', 'write')),
     PRIMARY KEY (folder_id, user_id),
-    FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
 );
 
 -- =================================================================
@@ -111,8 +89,7 @@ CREATE TABLE note_shares (
     user_id UUID NOT NULL, -- The user the note is shared WITH
     access_level VARCHAR(10) NOT NULL CHECK (access_level IN ('read', 'write')),
     PRIMARY KEY (note_id, user_id),
-    FOREIGN KEY (note_id) REFERENCES notes(note_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (note_id) REFERENCES notes(note_id) ON DELETE CASCADE
 );
 
 
@@ -142,14 +119,6 @@ DECLARE
     note_alice_id UUID    := 'd5d5d5d5-d5d5-d5d5-d5d5-d5d5d5d5d5d5'; -- Corrected from 'j'
     note_carol_id UUID    := 'e6e6e6e6-e6e6-e6e6-e6e6-e6e6e6e6e6e6'; -- Corrected from 'k'
 BEGIN
-
--- Insert Users
-INSERT INTO users (user_id, username, email, password_hash, role) VALUES
-(manager_alice_id, 'Alice', 'alice@example.com', '$2a$10$dummyhashforexampleonly123', 'manager'),
-(manager_bob_id, 'Bob', 'bob@example.com', '$2a$10$dummyhashforexampleonly123', 'manager'),
-(member_carol_id, 'Carol', 'carol@example.com', '$2a$10$dummyhashforexampleonly123', 'member'),
-(member_dave_id, 'Dave', 'dave@example.com', '$2a$10$dummyhashforexampleonly123', 'member'),
-(member_eve_id, 'Eve', 'eve@example.com', '$2a$10$dummyhashforexampleonly123', 'member');
 
 -- Insert Teams
 INSERT INTO teams (team_id, team_name) VALUES

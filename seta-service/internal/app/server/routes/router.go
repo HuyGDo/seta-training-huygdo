@@ -4,6 +4,7 @@ import (
 	"seta/internal/app/server/controllers"
 	"seta/internal/app/server/graphql"
 	"seta/internal/app/server/middlewares"
+	"seta/internal/pkg/errorHandling"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -17,7 +18,7 @@ func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
 
 	// Add Prometheus middleware to all routes
 	r.Use(middlewares.PrometheusMiddleware())
-	r.Use(middlewares.ErrorHandler())
+	r.Use(errorHandling.ErrorHandler())
 
 	// Add Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))

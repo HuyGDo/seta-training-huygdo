@@ -2,13 +2,12 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
-
-	"seta/internal/pkg/models"
 
 	"seta/internal/pkg/errorHandling"
+	"seta/internal/pkg/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -39,10 +38,21 @@ func (ac *AssetController) CreateFolder(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userId")
+	userIDStr, exists := c.Get("userId")
+	if !exists {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
 	folder := models.Folder{
 		Name:    input.Name,
-		OwnerID: userID.(uint),
+		OwnerID: userID,
 	}
 
 	if err := ac.db.WithContext(c.Request.Context()).Create(&folder).Error; err != nil {
@@ -55,16 +65,31 @@ func (ac *AssetController) CreateFolder(c *gin.Context) {
 
 // GetFolder retrieves a single folder
 func (ac *AssetController) GetFolder(c *gin.Context) {
-	folderID := c.Param("folderId")
-	var folder models.Folder
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid folder ID format"})
+		return
+	}
 
+	var folder models.Folder
 	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
-	userID, _ := c.Get("userId")
-	if folder.OwnerID != userID.(uint) {
+	userIDStr, exists := c.Get("userId")
+	if !exists {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if folder.OwnerID != userID {
 		// Check if the folder is shared with the user
 		var share models.FolderShare
 		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
@@ -82,22 +107,31 @@ type UpdateFolderInput struct {
 
 // UpdateFolder updates a folder's name
 func (ac *AssetController) UpdateFolder(c *gin.Context) {
-	folderID := c.Param("folderId")
-	var folder models.Folder
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid folder ID format"})
+		return
+	}
 
+	var folder models.Folder
 	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
-	// Check if the user is the owner of the folder
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if folder.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if folder.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this folder"})
 		return
 	}
@@ -118,22 +152,31 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 
 // DeleteFolder deletes a folder
 func (ac *AssetController) DeleteFolder(c *gin.Context) {
-	folderID := c.Param("folderId")
-	var folder models.Folder
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid folder ID format"})
+		return
+	}
 
+	var folder models.Folder
 	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
-	// Check if the user is the owner of the folder
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if folder.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if folder.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this folder"})
 		return
 	}
@@ -150,28 +193,37 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 }
 
 type ShareFolderInput struct {
-	UserID uint   `json:"userId" binding:"required"`
-	Access string `json:"access" binding:"required"` // "read" or "write"
+	UserID uuid.UUID `json:"userId" binding:"required"`
+	Access string    `json:"access" binding:"required"` // "read" or "write"
 }
 
 // ShareFolder shares a folder with another user
 func (ac *AssetController) ShareFolder(c *gin.Context) {
-	folderID := c.Param("folderId")
-	var folder models.Folder
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid folder ID format"})
+		return
+	}
 
+	var folder models.Folder
 	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 
-	// Check if the user is the owner of the folder
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if folder.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if folder.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this folder"})
 		return
 	}
@@ -197,9 +249,9 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 }
 
 type CreateNoteInput struct {
-	Title    string `json:"title" binding:"required"`
-	Body     string `json:"body"`
-	FolderID uint   `json:"folderId" binding:"required"`
+	Title    string    `json:"title" binding:"required"`
+	Body     string    `json:"body"`
+	FolderID uuid.UUID `json:"folderId" binding:"required"`
 }
 
 // CreateNote creates a new note
@@ -210,7 +262,17 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userId")
+	userIDStr, exists := c.Get("userId")
+	if !exists {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
 
 	// Verify that the user has access to the folder
 	var folder models.Folder
@@ -218,7 +280,7 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
-	if folder.OwnerID != userID.(uint) {
+	if folder.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to create a note in this folder"})
 		return
 	}
@@ -227,7 +289,7 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 		Title:    input.Title,
 		Body:     input.Body,
 		FolderID: input.FolderID,
-		OwnerID:  userID.(uint),
+		OwnerID:  userID,
 	}
 
 	if err := ac.db.WithContext(c.Request.Context()).Create(&note).Error; err != nil {
@@ -240,16 +302,31 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 
 // GetNote retrieves a single note
 func (ac *AssetController) GetNote(c *gin.Context) {
-	noteID := c.Param("noteId")
-	var note models.Note
+	noteID, err := uuid.Parse(c.Param("noteId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid note ID format"})
+		return
+	}
 
+	var note models.Note
 	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
-	userID, _ := c.Get("userId")
-	if note.OwnerID != userID.(uint) {
+	userIDStr, exists := c.Get("userId")
+	if !exists {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if note.OwnerID != userID {
 		// Check if the note is shared with the user
 		var share models.NoteShare
 		if err := ac.db.WithContext(c.Request.Context()).Where("note_id = ? AND user_id = ?", note.NoteID, userID).First(&share).Error; err != nil {
@@ -268,22 +345,31 @@ type UpdateNoteInput struct {
 
 // UpdateNote updates a note's title or body
 func (ac *AssetController) UpdateNote(c *gin.Context) {
-	noteID := c.Param("noteId")
-	var note models.Note
+	noteID, err := uuid.Parse(c.Param("noteId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid note ID format"})
+		return
+	}
 
+	var note models.Note
 	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
-	// Check if the user is the owner of the note
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if note.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if note.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this note"})
 		return
 	}
@@ -304,22 +390,31 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 
 // DeleteNote deletes a note
 func (ac *AssetController) DeleteNote(c *gin.Context) {
-	noteID := c.Param("noteId")
-	var note models.Note
+	noteID, err := uuid.Parse(c.Param("noteId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid note ID format"})
+		return
+	}
 
+	var note models.Note
 	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
-	// Check if the user is the owner of the note
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if note.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if note.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to delete this note"})
 		return
 	}
@@ -335,28 +430,37 @@ func (ac *AssetController) DeleteNote(c *gin.Context) {
 }
 
 type ShareNoteInput struct {
-	UserID uint   `json:"userId" binding:"required"`
-	Access string `json:"access" binding:"required"` // "read" or "write"
+	UserID uuid.UUID `json:"userId" binding:"required"`
+	Access string    `json:"access" binding:"required"` // "read" or "write"
 }
 
 // ShareNote shares a note with another user
 func (ac *AssetController) ShareNote(c *gin.Context) {
-	noteID := c.Param("noteId")
-	var note models.Note
+	noteID, err := uuid.Parse(c.Param("noteId"))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid note ID format"})
+		return
+	}
 
+	var note models.Note
 	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
 
-	// Check if the user is the owner of the note
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
 
-	if note.OwnerID != userID.(uint) {
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if note.OwnerID != userID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to share this note"})
 		return
 	}
@@ -383,14 +487,25 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 
 // GetUserAssets retrieves all assets owned by or shared with a specific user.
 func (ac *AssetController) GetUserAssets(c *gin.Context) {
-	targetUserID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	targetUserID, err := uuid.Parse(c.Param("userId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid user ID"})
 		return
 	}
 
-	authUserID, _ := c.Get("userId")
-	if authUserID.(uint) != uint(targetUserID) {
+	authUserIDStr, exists := c.Get("userId")
+	if !exists {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
+		return
+	}
+
+	authUserID, err := uuid.Parse(authUserIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
+
+	if authUserID != targetUserID {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view these assets"})
 		return
 	}

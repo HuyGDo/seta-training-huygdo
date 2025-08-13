@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/models"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -27,28 +27,30 @@ type CreateTeamInput struct {
 
 // CreateTeam creates a new team.
 func (tc *TeamController) CreateTeam(c *gin.Context) {
-	var input struct {
-		Name string `json:"name" binding:"required"`
-	}
-
+	var input CreateTeamInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid request body"})
 		return
 	}
 
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("userId")
 	if !exists {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+		return
+	}
 
 	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, userID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", userID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
 
-	team := models.Team{TeamName: input.Name}
+	team := models.Team{TeamName: input.TeamName}
 	if err := tc.db.WithContext(c.Request.Context()).Create(&team).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team"})
 		return
@@ -64,35 +66,31 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 
 // AddRemoveMemberInput represents the input for adding or removing a team member.
 type AddRemoveMemberInput struct {
-	UserID string `json:"userId" binding:"required"`
+	UserID uuid.UUID `json:"userId" binding:"required"`
 }
 
 // AddMember adds a member to a team.
 func (tc *TeamController) AddMember(c *gin.Context) {
-	teamIDStr := c.Param("teamId")
-	teamID, err := strconv.ParseUint(teamIDStr, 10, 32)
+	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
 		return
 	}
 
-	var input struct {
-		UserID uint `json:"user_id" binding:"required"`
-	}
-
+	var input AddRemoveMemberInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid request body"})
 		return
 	}
 
 	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, input.UserID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", input.UserID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
@@ -107,28 +105,26 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 
 // RemoveMember removes a member from a team.
 func (tc *TeamController) RemoveMember(c *gin.Context) {
-	teamIDStr := c.Param("teamId")
-	teamID, err := strconv.ParseUint(teamIDStr, 10, 32)
+	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
 		return
 	}
 
-	memberIDStr := c.Param("memberId")
-	memberID, err := strconv.ParseUint(memberIDStr, 10, 32)
+	memberID, err := uuid.Parse(c.Param("memberId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid member ID"})
 		return
 	}
 
 	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var member models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&member, uint(memberID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&member, "id = ?", memberID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Member not found"})
 		return
 	}
@@ -143,30 +139,26 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 
 // AddManager adds a manager to a team.
 func (tc *TeamController) AddManager(c *gin.Context) {
-	teamIDStr := c.Param("teamId")
-	teamID, err := strconv.ParseUint(teamIDStr, 10, 32)
+	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
 		return
 	}
 
-	var input struct {
-		UserID uint `json:"user_id" binding:"required"`
-	}
-
+	var input AddRemoveMemberInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid request body"})
 		return
 	}
 
 	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, input.UserID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", input.UserID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
@@ -181,28 +173,26 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 
 // RemoveManager removes a manager from a team.
 func (tc *TeamController) RemoveManager(c *gin.Context) {
-	teamIDStr := c.Param("teamId")
-	teamID, err := strconv.ParseUint(teamIDStr, 10, 32)
+	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
 		return
 	}
 
-	managerIDStr := c.Param("managerId")
-	managerID, err := strconv.ParseUint(managerIDStr, 10, 32)
+	managerID, err := uuid.Parse(c.Param("managerId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid manager ID"})
 		return
 	}
 
 	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var manager models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&manager, uint(managerID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&manager, "id = ?", managerID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Manager not found"})
 		return
 	}
@@ -216,17 +206,23 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 }
 
 // GetTeamAssets retrieves all assets belonging to or shared with a team's members.
+// GetTeamAssets retrieves all assets belonging to or shared with a team's members.
 func (tc *TeamController) GetTeamAssets(c *gin.Context) {
-	teamIDStr := c.Param("teamId")
-	teamID, err := strconv.ParseUint(teamIDStr, 10, 32)
+	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
 		return
 	}
 
-	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).Preload("Members").First(&team, uint(teamID)).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
+	// Get all member IDs from the team's join table
+	var memberIDs []uuid.UUID
+	if err := tc.db.Table("team_members").Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve team members"})
+		return
+	}
+
+	if len(memberIDs) == 0 {
+		c.JSON(http.StatusOK, gin.H{"folders": []models.Folder{}, "notes": []models.Note{}})
 		return
 	}
 
@@ -235,16 +231,22 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 		Notes   []models.Note   `json:"notes"`
 	}
 
-	for _, member := range team.Members {
-		var memberFolders []models.Folder
-		if err := tc.db.WithContext(c.Request.Context()).Where("user_id = ?", member.ID).Find(&memberFolders).Error; err == nil {
-			assets.Folders = append(assets.Folders, memberFolders...)
-		}
+	// Fetch all folders owned by or shared with any team member
+	if err := tc.db.Joins("LEFT JOIN folder_shares ON folders.folder_id = folder_shares.folder_id").
+		Where("folders.owner_id IN (?) OR folder_shares.user_id IN (?)", memberIDs, memberIDs).
+		Group("folders.folder_id").
+		Find(&assets.Folders).Error; err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve folders"})
+		return
+	}
 
-		var memberNotes []models.Note
-		if err := tc.db.WithContext(c.Request.Context()).Where("user_id = ?", member.ID).Find(&memberNotes).Error; err == nil {
-			assets.Notes = append(assets.Notes, memberNotes...)
-		}
+	// Fetch all notes owned by or shared with any team member
+	if err := tc.db.Joins("LEFT JOIN note_shares ON notes.note_id = note_shares.note_id").
+		Where("notes.owner_id IN (?) OR note_shares.user_id IN (?)", memberIDs, memberIDs).
+		Group("notes.note_id").
+		Find(&assets.Notes).Error; err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve notes"})
+		return
 	}
 
 	c.JSON(http.StatusOK, assets)
