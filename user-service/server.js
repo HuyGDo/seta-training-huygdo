@@ -47,12 +47,17 @@ const server = new ApolloServer({
 });
 await server.start();
 
-const allowedOrigins = ["http://localhost:5173"];
+// const allowedOrigins = ["http://localhost:5173"];
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: "*", // Allow any origin
   credentials: true,
 };
+
+// const corsOptions = {
+//   origin: allowedOrigins,
+//   credentials: true,
+// };
 
 // to deal with Apollo Server's built-in Express middleware not being compatible with express 5
 app.use((req, res, next) => {

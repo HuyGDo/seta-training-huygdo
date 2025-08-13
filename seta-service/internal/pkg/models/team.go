@@ -6,6 +6,24 @@ import "github.com/google/uuid"
 type Team struct {
 	ID       uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey;column:id"`
 	TeamName string
-	Managers []User `gorm:"many2many:team_managers;"`
-	Members  []User `gorm:"many2many:team_members;"`
+
+}
+
+type TeamManager struct {
+    TeamID uuid.UUID `gorm:"primaryKey"`
+    UserID uuid.UUID `gorm:"primaryKey"`
+}
+
+func (TeamManager) TableName() string {
+    return "team_managers"
+}
+
+// TeamMember represents the join table between teams and members.
+type TeamMember struct {
+    TeamID uuid.UUID `gorm:"primaryKey"`
+    UserID uuid.UUID `gorm:"primaryKey"`
+}
+
+func (TeamMember) TableName() string {
+    return "team_members"
 }

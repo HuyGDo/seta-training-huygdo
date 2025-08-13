@@ -1,0 +1,5 @@
+username,email,password,role
+new_manager_hank,hank.manager@example.com,HankPass123!,MANAGER
+new_member_peggy,peggy.member@example.com,PeggyPass123!,MEMBER
+new_member_bobby,bobby.member@example.com,BobbyPass123!,MEMBER
+new_member_luanne,luanne.member@example.com,LuannePass123!,MEMBER

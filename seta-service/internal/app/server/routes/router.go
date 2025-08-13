@@ -4,6 +4,7 @@ import (
 	"seta/internal/app/server/controllers"
 	"seta/internal/app/server/graphql"
 	"seta/internal/app/server/middlewares"
+	"seta/internal/app/server/services" // Make sure services is imported
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/logger"
 
@@ -48,11 +49,14 @@ func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
 		}
 
 		assetController := controllers.NewAssetController(db)
-
+		
+		userService := services.NewUserService()
+		userController := controllers.NewUserController(userService)
 		// User routes
 		users := api.Group("/users")
 		{
 			users.GET("/:userId/assets", assetController.GetUserAssets)
+			users.POST("/import", middlewares.IsAuthorized("MANAGER"), userController.ImportUsers)
 		}
 
 		// Asset routes

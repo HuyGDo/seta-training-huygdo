@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"seta/internal/pkg/errorHandling"
 	"strings"
 
@@ -59,8 +60,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		userServiceURL := os.Getenv("USER_SERVICE_URL")
+		
+		if userServiceURL == "" {
+			userServiceURL = "http://localhost:4000/users" // Default for local dev
+		}
+
 		// Make the request to the user-service
-		resp, err := http.Post("http://localhost:4000/users", "application/json", bytes.NewBuffer(jsonQuery))
+		resp, err := http.Post(userServiceURL, "application/json", bytes.NewBuffer(jsonQuery))
 		if err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusServiceUnavailable, Message: "Failed to connect to user service"})
 			c.Abort()

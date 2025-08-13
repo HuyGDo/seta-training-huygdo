@@ -14,6 +14,9 @@ services:
     environment:
       # adjust user/db name as needed for your local Postgres
       - DATABASE_URL=postgres://huygdo@host.docker.internal:5432/seta_service_db?sslmode=disable
+
+      - USER_SERVICE_URL=http://user-service:4000/users
+
     # ensures host.docker.internal works on Linux (Docker 20.10+)
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -28,7 +31,15 @@ services:
       - ../user-service/logs:/app/logs
     environment:
       # adjust user/db name as needed for your local Postgres
-      - DATABASE_URL=postgres://huygdo@host.docker.internal:5432/user_service_db?sslmode=disable
+      - NODE_ENV=development
+      - ACCESS_TOKEN_SECRET=IDontKnowHowButTheyFoundMe
+      - REFRESH_TOKEN_SECRET=ArcticMonkeys
+      - DB_HOST=host.docker.internal
+      - DB_USER=huygdo
+      - DB_PASS=
+      - DB_NAME=user_service_db
+      - DB_DIALECT=postgres
+      - HOST=0.0.0.0
     # ensures host.docker.internal works on Linux (Docker 20.10+)
     extra_hosts:
       - "host.docker.internal:host-gateway"

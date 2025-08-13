@@ -38,7 +38,7 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
@@ -51,8 +51,9 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use the userID directly to create the association without a DB lookup.
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&models.User{ID: userID}); err != nil {
+	// FIX: Use GORM's Create method on the join table model
+	teamManager := models.TeamManager{TeamID: team.ID, UserID: userID}
+	if err := tc.db.WithContext(c.Request.Context()).Create(&teamManager).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -79,15 +80,9 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 		return
 	}
 
-	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
-		return
-	}
-
-	// FIX: Removed the unnecessary user lookup from this database.
-	userToAdd := &models.User{ID: input.UserID}
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Append(userToAdd); err != nil {
+	// FIX: Use GORM's Create method on the join table model
+	teamMember := models.TeamMember{TeamID: teamID, UserID: input.UserID}
+	if err := tc.db.WithContext(c.Request.Context()).Create(&teamMember).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add member to team"})
 		return
 	}
@@ -109,15 +104,8 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
-		return
-	}
-
-	// FIX: Removed the unnecessary user lookup from this database.
-	memberToRemove := &models.User{ID: memberID}
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Delete(memberToRemove); err != nil {
+	// FIX: Use GORM's Delete method on the join table model
+	if err := tc.db.WithContext(c.Request.Context()).Delete(&models.TeamMember{TeamID: teamID, UserID: memberID}).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove member from team"})
 		return
 	}
@@ -139,15 +127,9 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 		return
 	}
 
-	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
-		return
-	}
-
-	// FIX: Removed the unnecessary user lookup from this database.
-	managerToAdd := &models.User{ID: input.UserID}
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(managerToAdd); err != nil {
+	// FIX: Use GORM's Create method on the join table model
+	teamManager := models.TeamManager{TeamID: teamID, UserID: input.UserID}
+	if err := tc.db.WithContext(c.Request.Context()).Create(&teamManager).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -169,15 +151,8 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 		return
 	}
 
-	var team models.Team
-	if err := tc.db.WithContext(c.Request.Context()).First(&team, "id = ?", teamID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
-		return
-	}
-
-	// FIX: Removed the unnecessary user lookup from this database.
-	managerToRemove := &models.User{ID: managerID}
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Delete(managerToRemove); err != nil {
+	// FIX: Use GORM's Delete method on the join table model
+	if err := tc.db.WithContext(c.Request.Context()).Delete(&models.TeamManager{TeamID: teamID, UserID: managerID}).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove manager from team"})
 		return
 	}
@@ -194,7 +169,7 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 	}
 
 	var memberIDs []uuid.UUID
-	if err := tc.db.Table("team_members").Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
+	if err := tc.db.Model(&models.TeamMember{}).Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve team members"})
 		return
 	}

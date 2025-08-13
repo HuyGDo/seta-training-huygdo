@@ -51,3 +51,28 @@
 {"level":"info","time":"2025-08-14T02:58:38+07:00","message":"Starting server on port 8080"}
 {"level":"info","method":"POST","path":"/api/teams","status":500,"latency":36.588333,"client_ip":"::1","time":"2025-08-14T02:58:40+07:00","message":"Request handled"}
 {"level":"info","method":"POST","path":"/api/teams","status":500,"latency":7.145042,"client_ip":"::1","time":"2025-08-14T02:58:48+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":500,"latency":8.926583,"client_ip":"::1","time":"2025-08-14T03:13:37+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-14T03:18:54+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T03:18:54+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":44.206875,"client_ip":"::1","time":"2025-08-14T03:19:00+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams/e7fbfa48-89eb-4b2f-b535-c87ece362a49/members","status":401,"latency":0.628167,"client_ip":"::1","time":"2025-08-14T03:21:28+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams/e7fbfa48-89eb-4b2f-b535-c87ece362a49/members","status":401,"latency":3.20925,"client_ip":"::1","time":"2025-08-14T03:21:53+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams/e7fbfa48-89eb-4b2f-b535-c87ece362a49/members","status":204,"latency":82.29525,"client_ip":"::1","time":"2025-08-14T03:22:10+07:00","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/users/import","status":404,"latency":0.481416,"client_ip":"::1","time":"2025-08-14T04:07:03+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-14T04:07:18+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T04:07:18+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"GET","path":"/api/users/import","status":404,"latency":0.076583,"client_ip":"::1","time":"2025-08-14T04:07:22+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/users/import","status":400,"latency":18.262167,"client_ip":"::1","time":"2025-08-14T04:07:39+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/users/import","status":400,"latency":14.979959,"client_ip":"::1","time":"2025-08-14T04:08:24+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/users/import","status":200,"latency":33.037833,"client_ip":"::1","time":"2025-08-14T04:09:06+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/assets/folders","status":401,"latency":22.194125,"client_ip":"::1","time":"2025-08-14T04:38:42+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-13T21:41:23Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-13T21:41:23Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/assets/folders","status":503,"latency":1.99125,"client_ip":"192.168.65.1","time":"2025-08-13T21:41:48Z","message":"Request handled"}
+{"level":"info","time":"2025-08-13T21:45:30Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-13T21:45:30Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-13T21:46:01Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-13T21:46:01Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-13T21:48:26Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-13T21:48:26Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/assets/folders","status":201,"latency":49.43025,"client_ip":"192.168.65.1","time":"2025-08-13T21:49:57Z","message":"Request handled"}
