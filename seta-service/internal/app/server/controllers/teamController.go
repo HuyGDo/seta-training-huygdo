@@ -38,15 +38,10 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
 		return
 	}
+	
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
-		return
-	}
-
-	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", userID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
 
@@ -56,7 +51,8 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&user); err != nil {
+	// FIX: Use the userID directly to create the association without a DB lookup.
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&models.User{ID: userID}); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -89,13 +85,9 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", input.UserID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
-		return
-	}
-
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Append(&user); err != nil {
+	// FIX: Removed the unnecessary user lookup from this database.
+	userToAdd := &models.User{ID: input.UserID}
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Append(userToAdd); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add member to team"})
 		return
 	}
@@ -123,13 +115,9 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	var member models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&member, "id = ?", memberID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Member not found"})
-		return
-	}
-
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Delete(&member); err != nil {
+	// FIX: Removed the unnecessary user lookup from this database.
+	memberToRemove := &models.User{ID: memberID}
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Delete(memberToRemove); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove member from team"})
 		return
 	}
@@ -157,13 +145,9 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&user, "id = ?", input.UserID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
-		return
-	}
-
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&user); err != nil {
+	// FIX: Removed the unnecessary user lookup from this database.
+	managerToAdd := &models.User{ID: input.UserID}
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(managerToAdd); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -191,13 +175,9 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 		return
 	}
 
-	var manager models.User
-	if err := tc.db.WithContext(c.Request.Context()).First(&manager, "id = ?", managerID).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Manager not found"})
-		return
-	}
-
-	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Delete(&manager); err != nil {
+	// FIX: Removed the unnecessary user lookup from this database.
+	managerToRemove := &models.User{ID: managerID}
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Delete(managerToRemove); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove manager from team"})
 		return
 	}
@@ -206,7 +186,6 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 }
 
 // GetTeamAssets retrieves all assets belonging to or shared with a team's members.
-// GetTeamAssets retrieves all assets belonging to or shared with a team's members.
 func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 	teamID, err := uuid.Parse(c.Param("teamId"))
 	if err != nil {
@@ -214,7 +193,6 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 		return
 	}
 
-	// Get all member IDs from the team's join table
 	var memberIDs []uuid.UUID
 	if err := tc.db.Table("team_members").Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve team members"})
@@ -231,7 +209,6 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 		Notes   []models.Note   `json:"notes"`
 	}
 
-	// Fetch all folders owned by or shared with any team member
 	if err := tc.db.Joins("LEFT JOIN folder_shares ON folders.folder_id = folder_shares.folder_id").
 		Where("folders.owner_id IN (?) OR folder_shares.user_id IN (?)", memberIDs, memberIDs).
 		Group("folders.folder_id").
@@ -240,7 +217,6 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 		return
 	}
 
-	// Fetch all notes owned by or shared with any team member
 	if err := tc.db.Joins("LEFT JOIN note_shares ON notes.note_id = note_shares.note_id").
 		Where("notes.owner_id IN (?) OR note_shares.user_id IN (?)", memberIDs, memberIDs).
 		Group("notes.note_id").

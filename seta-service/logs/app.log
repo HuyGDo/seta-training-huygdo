@@ -37,3 +37,17 @@
 {"level":"info","time":"2025-08-13T15:59:07+07:00","message":"Starting server on port 8080"}
 {"level":"info","time":"2025-08-14T01:40:18+07:00","message":"Database connection successful."}
 {"level":"info","time":"2025-08-14T01:40:18+07:00","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-14T02:05:36+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T02:05:36+07:00","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-14T02:12:40+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T02:12:40+07:00","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-14T02:36:46+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T02:36:46+07:00","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-14T02:55:55+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T02:55:55+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":401,"latency":12.225,"client_ip":"::1","time":"2025-08-14T02:55:59+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":500,"latency":22.649,"client_ip":"::1","time":"2025-08-14T02:56:20+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-14T02:58:38+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T02:58:38+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":500,"latency":36.588333,"client_ip":"::1","time":"2025-08-14T02:58:40+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":500,"latency":7.145042,"client_ip":"::1","time":"2025-08-14T02:58:48+07:00","message":"Request handled"}

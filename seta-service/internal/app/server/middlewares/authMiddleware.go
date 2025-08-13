@@ -30,7 +30,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := parts[1]
 
 		// Prepare the GraphQL query
-		query := map[string]string{
+		type GQLVariables struct {
+			Token string `json:"token"`
+		}
+
+		// Prepare the GraphQL query using a struct that will marshal correctly
+		query := gin.H{
 			"query": `
                 query VerifyToken($token: String!) {
                     verifyToken(token: $token) {
@@ -42,8 +47,11 @@ func AuthMiddleware() gin.HandlerFunc {
                     }
                 }
             `,
-			"variables": `{"token": "` + tokenString + `"}`,
+			"variables": GQLVariables{
+				Token: tokenString,
+			},
 		}
+
 		jsonQuery, err := json.Marshal(query)
 		if err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create GraphQL query"})

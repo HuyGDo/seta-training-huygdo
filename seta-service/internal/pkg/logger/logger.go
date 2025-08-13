@@ -4,7 +4,9 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
 
@@ -28,4 +30,23 @@ func New() *zerolog.Logger {
 	log := zerolog.New(writer).With().Timestamp().Logger()
 
 	return &log
+}
+
+func RequestLogger(log *zerolog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		// Process request
+		c.Next()
+
+		// This will now output in the desired format:
+		// {"level":"info","time":"...Z","message":"Request handled","method":"GET",...}
+		log.Info().
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Int("status", c.Writer.Status()).
+			Dur("latency", time.Since(start)).
+			Str("client_ip", c.ClientIP()).
+			Msg("Request handled")
+	}
 }

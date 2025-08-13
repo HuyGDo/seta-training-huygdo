@@ -5,6 +5,7 @@ import (
 	"seta/internal/app/server/graphql"
 	"seta/internal/app/server/middlewares"
 	"seta/internal/pkg/errorHandling"
+	"seta/internal/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,6 +16,8 @@ import (
 // SetupRouter initializes the Gin router and sets up the routes.
 func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(logger.RequestLogger(log))
 
 	// Add Prometheus middleware to all routes
 	r.Use(middlewares.PrometheusMiddleware())
@@ -34,7 +37,7 @@ func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
 		// Team routes
 		teamController := controllers.NewTeamController(db)
 		teams := api.Group("/teams")
-		teams.Use(middlewares.IsAuthorized("manager"))
+		teams.Use(middlewares.IsAuthorized("MANAGER"))
 		{
 			teams.POST("", teamController.CreateTeam)
 			teams.POST("/:teamId/members", teamController.AddMember)
