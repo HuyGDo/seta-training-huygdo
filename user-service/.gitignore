@@ -29,6 +29,7 @@ coverage/
 .vscode/
 *.sublime-project
 *.sublime-workspace
+.env
 
 cucumber_report.html
 cucumber_report.json
