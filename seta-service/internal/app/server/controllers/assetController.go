@@ -45,7 +45,7 @@ func (ac *AssetController) CreateFolder(c *gin.Context) {
 		OwnerID: userID.(uint),
 	}
 
-	if err := ac.db.Create(&folder).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Create(&folder).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create folder"})
 		return
 	}
@@ -58,7 +58,7 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 	folderID := c.Param("folderId")
 	var folder models.Folder
 
-	if err := ac.db.First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -67,7 +67,7 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 	if folder.OwnerID != userID.(uint) {
 		// Check if the folder is shared with the user
 		var share models.FolderShare
-		if err := ac.db.Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
+		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this folder"})
 			return
 		}
@@ -85,7 +85,7 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 	folderID := c.Param("folderId")
 	var folder models.Folder
 
-	if err := ac.db.First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -108,7 +108,7 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 		return
 	}
 
-	if err := ac.db.Model(&folder).Update("name", input.Name).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Model(&folder).Update("name", input.Name).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update folder"})
 		return
 	}
@@ -121,7 +121,7 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	folderID := c.Param("folderId")
 	var folder models.Folder
 
-	if err := ac.db.First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -139,9 +139,9 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	}
 
 	// Delete associated notes and shares
-	ac.db.Where("folder_id = ?", folder.FolderID).Delete(&models.Note{})
-	ac.db.Where("folder_id = ?", folder.FolderID).Delete(&models.FolderShare{})
-	if err := ac.db.Delete(&folder).Error; err != nil {
+	ac.db.WithContext(c.Request.Context()).Where("folder_id = ?", folder.FolderID).Delete(&models.Note{})
+	ac.db.WithContext(c.Request.Context()).Where("folder_id = ?", folder.FolderID).Delete(&models.FolderShare{})
+	if err := ac.db.WithContext(c.Request.Context()).Delete(&folder).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete folder"})
 		return
 	}
@@ -159,7 +159,7 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 	folderID := c.Param("folderId")
 	var folder models.Folder
 
-	if err := ac.db.First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -188,7 +188,7 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 		Access:   input.Access,
 	}
 
-	if err := ac.db.Create(&share).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Create(&share).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share folder"})
 		return
 	}
@@ -214,7 +214,7 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 
 	// Verify that the user has access to the folder
 	var folder models.Folder
-	if err := ac.db.First(&folder, input.FolderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, input.FolderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -230,7 +230,7 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 		OwnerID:  userID.(uint),
 	}
 
-	if err := ac.db.Create(&note).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Create(&note).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create note"})
 		return
 	}
@@ -243,7 +243,7 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 	noteID := c.Param("noteId")
 	var note models.Note
 
-	if err := ac.db.First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -252,7 +252,7 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 	if note.OwnerID != userID.(uint) {
 		// Check if the note is shared with the user
 		var share models.NoteShare
-		if err := ac.db.Where("note_id = ? AND user_id = ?", note.NoteID, userID).First(&share).Error; err != nil {
+		if err := ac.db.WithContext(c.Request.Context()).Where("note_id = ? AND user_id = ?", note.NoteID, userID).First(&share).Error; err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this note"})
 			return
 		}
@@ -271,7 +271,7 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 	noteID := c.Param("noteId")
 	var note models.Note
 
-	if err := ac.db.First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -294,7 +294,7 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 		return
 	}
 
-	if err := ac.db.Model(&note).Updates(input).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Model(&note).Updates(input).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update note"})
 		return
 	}
@@ -307,7 +307,7 @@ func (ac *AssetController) DeleteNote(c *gin.Context) {
 	noteID := c.Param("noteId")
 	var note models.Note
 
-	if err := ac.db.First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -325,8 +325,8 @@ func (ac *AssetController) DeleteNote(c *gin.Context) {
 	}
 
 	// Delete associated shares
-	ac.db.Where("note_id = ?", note.NoteID).Delete(&models.NoteShare{})
-	if err := ac.db.Delete(&note).Error; err != nil {
+	ac.db.WithContext(c.Request.Context()).Where("note_id = ?", note.NoteID).Delete(&models.NoteShare{})
+	if err := ac.db.WithContext(c.Request.Context()).Delete(&note).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete note"})
 		return
 	}
@@ -344,7 +344,7 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 	noteID := c.Param("noteId")
 	var note models.Note
 
-	if err := ac.db.First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -373,7 +373,7 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 		Access: input.Access,
 	}
 
-	if err := ac.db.Create(&share).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).Create(&share).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share note"})
 		return
 	}
@@ -396,7 +396,7 @@ func (ac *AssetController) GetUserAssets(c *gin.Context) {
 	}
 
 	var folders []models.Folder
-	if err := ac.db.
+	if err := ac.db.WithContext(c.Request.Context()).
 		Joins("LEFT JOIN folder_shares ON folders.folder_id = folder_shares.folder_id").
 		Where("folders.owner_id = ? OR folder_shares.user_id = ?", targetUserID, targetUserID).
 		Group("folders.folder_id").
@@ -406,7 +406,7 @@ func (ac *AssetController) GetUserAssets(c *gin.Context) {
 	}
 
 	var notes []models.Note
-	if err := ac.db.
+	if err := ac.db.WithContext(c.Request.Context()).
 		Joins("LEFT JOIN note_shares ON notes.note_id = note_shares.note_id").
 		Where("notes.owner_id = ? OR note_shares.user_id = ?", targetUserID, targetUserID).
 		Group("notes.note_id").

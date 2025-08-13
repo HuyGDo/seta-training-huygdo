@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"seta/internal/pkg/models"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,7 +24,13 @@ func GenerateToken(user *models.User) (string, error) {
 		secret = "default-secret-key" // Fallback for local development
 	}
 
-	expirationTime := time.Now().Add(72 * time.Hour)
+	expirationHourStr := os.Getenv("JWT_EXPIRATION_HOURS")
+	expirationHour, err := strconv.Atoi(expirationHourStr)
+	if err != nil {
+		expirationHour = 72
+	}
+
+	expirationTime := time.Now().Add(time.Duration(expirationHour) * time.Hour)
 	claims := &Claims{
 		UserID: user.ID.String(),
 		Role:   user.Role,

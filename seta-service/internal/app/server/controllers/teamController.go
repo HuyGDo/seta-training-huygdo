@@ -43,18 +43,18 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := tc.db.First(&user, userID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, userID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
 
 	team := models.Team{TeamName: input.Name}
-	if err := tc.db.Create(&team).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Create(&team).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team"})
 		return
 	}
 
-	if err := tc.db.Model(&team).Association("Managers").Append(&user); err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&user); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -86,18 +86,18 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := tc.db.First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var user models.User
-	if err := tc.db.First(&user, input.UserID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, input.UserID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
 
-	if err := tc.db.Model(&team).Association("Members").Append(&user); err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Append(&user); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add member to team"})
 		return
 	}
@@ -122,18 +122,18 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := tc.db.First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var member models.User
-	if err := tc.db.First(&member, uint(memberID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&member, uint(memberID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Member not found"})
 		return
 	}
 
-	if err := tc.db.Model(&team).Association("Members").Delete(&member); err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Members").Delete(&member); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove member from team"})
 		return
 	}
@@ -160,18 +160,18 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := tc.db.First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var user models.User
-	if err := tc.db.First(&user, input.UserID).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&user, input.UserID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "User not found"})
 		return
 	}
 
-	if err := tc.db.Model(&team).Association("Managers").Append(&user); err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Append(&user); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
 		return
 	}
@@ -196,18 +196,18 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := tc.db.First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&team, uint(teamID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
 
 	var manager models.User
-	if err := tc.db.First(&manager, uint(managerID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).First(&manager, uint(managerID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Manager not found"})
 		return
 	}
 
-	if err := tc.db.Model(&team).Association("Managers").Delete(&manager); err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Model(&team).Association("Managers").Delete(&manager); err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove manager from team"})
 		return
 	}
@@ -225,7 +225,7 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := tc.db.Preload("Members").First(&team, uint(teamID)).Error; err != nil {
+	if err := tc.db.WithContext(c.Request.Context()).Preload("Members").First(&team, uint(teamID)).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Team not found"})
 		return
 	}
@@ -237,12 +237,12 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 
 	for _, member := range team.Members {
 		var memberFolders []models.Folder
-		if err := tc.db.Where("user_id = ?", member.ID).Find(&memberFolders).Error; err == nil {
+		if err := tc.db.WithContext(c.Request.Context()).Where("user_id = ?", member.ID).Find(&memberFolders).Error; err == nil {
 			assets.Folders = append(assets.Folders, memberFolders...)
 		}
 
 		var memberNotes []models.Note
-		if err := tc.db.Where("user_id = ?", member.ID).Find(&memberNotes).Error; err == nil {
+		if err := tc.db.WithContext(c.Request.Context()).Where("user_id = ?", member.ID).Find(&memberNotes).Error; err == nil {
 			assets.Notes = append(assets.Notes, memberNotes...)
 		}
 	}
