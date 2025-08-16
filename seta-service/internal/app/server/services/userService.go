@@ -2,32 +2,43 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
-
-	"github.com/gin-gonic/gin"
+	"time"
 )
 
-// Summary contains the final results of the import process.
+// FailedRecord holds information about a CSV record that failed to import.
+type FailedRecord struct {
+	Record []string `json:"record"`
+	Reason string   `json:"reason"`
+}
+
+// Summary now includes detailed failure information.
 type Summary struct {
-	Succeeded int `json:"succeeded"`
-	Failed    int `json:"failed"`
+	Succeeded int            `json:"succeeded"`
+	Failed    int            `json:"failed"`
+	Failures  []FailedRecord `json:"failures"`
 }
 
-// userJob represents a single line from the CSV to be processed.
+// userJob now includes a line number for better error tracking.
 type userJob struct {
-	record []string
+	lineNumber int
+	record     []string
 }
 
-// jobResult holds the outcome of processing a single userJob.
+// jobResult now contains enough detail to report specific errors.
 type jobResult struct {
-	success bool
-	message string
+	success    bool
+	lineNumber int
+	record     []string
+	message    string
 }
 
 // UserService handles the business logic for user-related operations.
@@ -39,113 +50,195 @@ func NewUserService() *UserService {
 }
 
 // ImportUsers orchestrates the entire CSV import process.
-func (s *UserService) ImportUsers(file io.Reader) (Summary, error) {
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		return Summary{}, fmt.Errorf("failed to parse CSV file: %w", err)
-	}
+func (s *UserService) ImportUsers(ctx context.Context, file io.Reader) (Summary, error) {
+    reader := csv.NewReader(file)
 
-	numJobs := len(records) - 1 // Subtract header row
-	if numJobs <= 0 {
-		return Summary{}, nil // Return empty summary if no data rows
-	}
+    // Read header
+    if _, err := reader.Read(); err != nil {
+        if err == io.EOF {
+            return Summary{}, nil
+        }
+        return Summary{}, fmt.Errorf("failed to read CSV header: %w", err)
+    }
 
-	jobs := make(chan userJob, numJobs)
-	results := make(chan jobResult, numJobs)
-	var wg sync.WaitGroup
+    // Workers
+    numWorkers := 10
+    if v, _ := strconv.Atoi(os.Getenv("USER_IMPORT_WORKERS")); v > 0 {
+        numWorkers = v
+    }
 
-	numWorkers := 10 // This can be made configurable
-	for w := 0; w < numWorkers; w++ {
-		go s.worker(jobs, results, &wg)
-	}
+    jobs := make(chan userJob)
+    results := make(chan jobResult, numWorkers*2) // buffered so workers don't block
+    var wg sync.WaitGroup
+    wg.Add(numWorkers)
+    for i := 0; i < numWorkers; i++ {
+        go s.worker(ctx, jobs, results, &wg)
+    }
 
-	for _, record := range records[1:] { // Skip header
-		wg.Add(1)
-		jobs <- userJob{record: record}
-	}
-	close(jobs)
+    // Close results when ALL workers are done
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
 
-	wg.Wait()
-	close(results)
+    summary := Summary{Failures: make([]FailedRecord, 0)}
+    // Feed jobs in THIS goroutine (no results writes here)
+    line := 1 // header
+    for {
+        line++
+        record, err := reader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            // Malformed CSV row: record failure locally (don't send to results)
+            summary.Failed++
+            summary.Failures = append(summary.Failures, FailedRecord{
+                Record: []string{"malformed row"},
+                Reason: fmt.Sprintf("Line %d: %v", line, err),
+            })
+            continue
+        }
 
-	summary := Summary{}
-	for result := range results {
-		if result.success {
-			summary.Succeeded++
-		} else {
-			summary.Failed++
-		}
-	}
-	return summary, nil
+        select {
+        case <-ctx.Done():
+            // Stop feeding; let workers drain/exit
+            close(jobs)
+            // Drain whatever results are pending before returning
+            for r := range results {
+                if r.success {
+                    summary.Succeeded++
+                } else {
+                    summary.Failed++
+                    summary.Failures = append(summary.Failures, FailedRecord{
+                        Record: r.record,
+                        Reason: fmt.Sprintf("Line %d: %s", r.lineNumber, r.message),
+                    })
+                }
+            }
+            return summary, ctx.Err()
+
+        case jobs <- userJob{lineNumber: line, record: record}:
+        }
+    }
+    close(jobs)
+
+    // Collect worker results until results is closed by the waiter goroutine
+    for r := range results {
+        if r.success {
+            summary.Succeeded++
+        } else {
+            summary.Failed++
+            summary.Failures = append(summary.Failures, FailedRecord{
+                Record: r.record,
+                Reason: fmt.Sprintf("Line %d: %s", r.lineNumber, r.message),
+            })
+        }
+    }
+
+    return summary, nil
 }
+
 
 // worker processes jobs from the jobs channel.
-func (s *UserService) worker(jobs <-chan userJob, results chan<- jobResult, wg *sync.WaitGroup) {
+func (s *UserService) worker(ctx context.Context, jobs <-chan userJob, results chan<- jobResult, wg *sync.WaitGroup) {
+	defer wg.Done() 
 	for job := range jobs {
-		err := s.callCreateUserMutation(job.record)
+		if ctx.Err() != nil {
+			results <- jobResult{success: false, lineNumber: job.lineNumber, record: job.record, message: "Request canceled"}
+			continue
+		}
+		err := s.callCreateUserMutation(ctx, job.record)
 		if err != nil {
-			results <- jobResult{success: false, message: err.Error()}
+			results <- jobResult{success: false, lineNumber: job.lineNumber, record: job.record, message: err.Error()}
 		} else {
-			results <- jobResult{success: true, message: "User created"}
+			results <- jobResult{success: true, lineNumber: job.lineNumber, record: job.record, message: "User created"}
 		}
 	}
 }
 
-// callCreateUserMutation sends a GraphQL mutation to the user-service.
-func (s *UserService) callCreateUserMutation(record []string) error {
-	userServiceURL := os.Getenv("USER_SERVICE_URL")
-    
-	if userServiceURL == "" {
-        userServiceURL = "http://localhost:4000/users" // Default for local dev
+// callCreateUserMutation sends a GraphQL mutation with retries and context handling.
+func (s *UserService) callCreateUserMutation(ctx context.Context, record []string) error {
+    userServiceURL := os.Getenv("USER_SERVICE_URL")
+    if userServiceURL == "" {
+        userServiceURL = "http://localhost:4000/users"
     }
-	
-	if len(record) < 4 {
-		return fmt.Errorf("invalid record: not enough columns")
-	}
+    if len(record) < 4 {
+        return fmt.Errorf("invalid record: not enough columns")
+    }
 
-	userInput := gin.H{
-		"username": record[0],
-		"email":    record[1],
-		"password": record[2],
-		"role":     record[3],
-	}
+    payload := map[string]any{
+        "query": `mutation CreateUser($input: CreateUserInput!) {
+                    createUser(input: $input) { success errors }
+                  }`,
+        "variables": map[string]any{
+            "input": map[string]any{
+                "username": record[0],
+                "email":    record[1],
+                "password": record[2],
+                "role":     record[3],
+            },
+        },
+    }
+    jsonData, err := json.Marshal(payload)
+    if err != nil { return fmt.Errorf("failed to marshal query: %w", err) }
 
-	query := gin.H{
-		"query": `
-            mutation CreateUser($input: CreateUserInput!) {
-              createUser(input: $input) { success, errors }
-            }`,
-		"variables": gin.H{"input": userInput},
-	}
+    client := &http.Client{ Timeout: 15 * time.Second } // ⬅ timeout
+    maxRetries := 3
 
-	jsonData, err := json.Marshal(query)
-	if err != nil {
-		return fmt.Errorf("failed to marshal query: %w", err)
-	}
+    for attempt := 1; attempt <= maxRetries; attempt++ {
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+        default:
+        }
 
-	resp, err := http.Post(userServiceURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("user service connection error: %w", err)
-	}
-	defer resp.Body.Close()
+        req, err := http.NewRequestWithContext(ctx, http.MethodPost, userServiceURL, bytes.NewBuffer(jsonData))
+        if err != nil { return err }
+        req.Header.Set("Content-Type", "application/json")
 
-	var result struct {
-		Data struct {
-			CreateUser struct {
-				Success bool     `json:"success"`
-				Errors  []string `json:"errors"`
-			} `json:"createUser"`
-		} `json:"data"`
-	}
+        resp, err := client.Do(req)
+        if err != nil {
+            if attempt == maxRetries { return fmt.Errorf("user service connection error after %d attempts: %w", maxRetries, err) }
+            time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+            continue
+        }
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
-	}
+        func() {
+            defer resp.Body.Close()
 
-	if !result.Data.CreateUser.Success {
-		return fmt.Errorf("API error: %v", result.Data.CreateUser.Errors)
-	}
+            if resp.StatusCode >= 400 {
+                body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+                err = fmt.Errorf("user service HTTP %d: %s", resp.StatusCode, string(body))
+                return
+            }
 
-	return nil
+            var result struct {
+                Data struct {
+                    CreateUser struct {
+                        Success bool     `json:"success"`
+                        Errors  []string `json:"errors"`
+                    } `json:"createUser"`
+                } `json:"data"`
+                Errors []struct {
+                    Message string `json:"message"`
+                } `json:"errors"`
+            }
+            if de := json.NewDecoder(resp.Body).Decode(&result); de != nil {
+                err = fmt.Errorf("failed to decode response: %w", de); return
+            }
+            if len(result.Errors) > 0 {
+                err = fmt.Errorf("GraphQL error: %s", result.Errors[0].Message); return
+            }
+            if !result.Data.CreateUser.Success {
+                err = fmt.Errorf("API error: %v", result.Data.CreateUser.Errors); return
+            }
+            err = nil
+        }()
+
+        if err == nil { return nil }
+        if attempt == maxRetries { return err }
+        time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+    }
+    return fmt.Errorf("unexpected error in retry loop")
 }

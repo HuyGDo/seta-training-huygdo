@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/models"
 
@@ -72,7 +71,7 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 	}
 
 	var folder models.Folder
-	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -89,8 +88,9 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 		return
 	}
 
+	// Check if the user is the owner
 	if folder.OwnerID != userID {
-		// Check if the folder is shared with the user
+		// If not the owner, check if the folder is shared with the user
 		var share models.FolderShare
 		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this folder"})
@@ -114,7 +114,7 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 	}
 
 	var folder models.Folder
-	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -131,9 +131,13 @@ func (ac *AssetController) UpdateFolder(c *gin.Context) {
 		return
 	}
 
+	// Check if the user is the owner or has write access
 	if folder.OwnerID != userID {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this folder"})
-		return
+		var share models.FolderShare
+		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ? AND access = ?", folder.FolderID, userID, "write").First(&share).Error; err != nil {
+			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this folder"})
+			return
+		}
 	}
 
 	var input UpdateFolderInput
@@ -159,7 +163,7 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	}
 
 	var folder models.Folder
-	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -206,7 +210,7 @@ func (ac *AssetController) ShareFolder(c *gin.Context) {
 	}
 
 	var folder models.Folder
-	if err := ac.db.WithContext(c.Request.Context()).First(&folder, folderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
@@ -276,13 +280,16 @@ func (ac *AssetController) CreateNote(c *gin.Context) {
 
 	// Verify that the user has access to the folder
 	var folder models.Folder
-	if err := ac.db.WithContext(c.Request.Context()).First(&folder, input.FolderID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", input.FolderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
 	if folder.OwnerID != userID {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to create a note in this folder"})
-		return
+		var share models.FolderShare
+		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ? AND access = ?", folder.FolderID, userID, "write").First(&share).Error; err != nil {
+			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to create a note in this folder"})
+			return
+		}
 	}
 
 	note := models.Note{
@@ -309,7 +316,7 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 	}
 
 	var note models.Note
-	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, "note_id = ?", noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -330,8 +337,12 @@ func (ac *AssetController) GetNote(c *gin.Context) {
 		// Check if the note is shared with the user
 		var share models.NoteShare
 		if err := ac.db.WithContext(c.Request.Context()).Where("note_id = ? AND user_id = ?", note.NoteID, userID).First(&share).Error; err != nil {
-			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this note"})
-			return
+
+			var folderShare models.FolderShare
+			if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ?", note.FolderID, userID).First(&folderShare).Error; err != nil {
+				_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this note"})
+				return
+			}
 		}
 	}
 
@@ -352,7 +363,7 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 	}
 
 	var note models.Note
-	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, "note_id = ?", noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -370,8 +381,15 @@ func (ac *AssetController) UpdateNote(c *gin.Context) {
 	}
 
 	if note.OwnerID != userID {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this note"})
-		return
+		var share models.NoteShare
+		if err := ac.db.WithContext(c.Request.Context()).Where("note_id = ? AND user_id = ? AND access = ?", note.NoteID, userID, "write").First(&share).Error; err != nil {
+
+			var folderShare models.FolderShare
+			if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ? AND access = ?", note.FolderID, userID, "write").First(&folderShare).Error; err != nil {
+				_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to update this note"})
+				return
+			}
+		}
 	}
 
 	var input UpdateNoteInput
@@ -397,7 +415,7 @@ func (ac *AssetController) DeleteNote(c *gin.Context) {
 	}
 
 	var note models.Note
-	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, "note_id = ?", noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -443,7 +461,7 @@ func (ac *AssetController) ShareNote(c *gin.Context) {
 	}
 
 	var note models.Note
-	if err := ac.db.WithContext(c.Request.Context()).First(&note, noteID).Error; err != nil {
+	if err := ac.db.WithContext(c.Request.Context()).First(&note, "note_id = ?", noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
@@ -523,7 +541,8 @@ func (ac *AssetController) GetUserAssets(c *gin.Context) {
 	var notes []models.Note
 	if err := ac.db.WithContext(c.Request.Context()).
 		Joins("LEFT JOIN note_shares ON notes.note_id = note_shares.note_id").
-		Where("notes.owner_id = ? OR note_shares.user_id = ?", targetUserID, targetUserID).
+		Joins("LEFT JOIN folder_shares ON notes.folder_id = folder_shares.folder_id").
+		Where("notes.owner_id = ? OR note_shares.user_id = ? OR folder_shares.user_id = ?", targetUserID, targetUserID, targetUserID).
 		Group("notes.note_id").
 		Find(&notes).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve notes for the user"})

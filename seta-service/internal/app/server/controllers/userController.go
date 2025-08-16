@@ -35,15 +35,18 @@ func (uc *UserController) ImportUsers(c *gin.Context) {
 	}
 	defer openedFile.Close()
 
-	summary, err := uc.userService.ImportUsers(openedFile)
+	// C.1: Context Propagation - Pass the request context to the service.
+	summary, err := uc.userService.ImportUsers(c.Request.Context(), openedFile)
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
+	// B.2: Detailed Failure Reasons - Return the detailed summary.
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "User import process completed.",
 		"succeeded": summary.Succeeded,
 		"failed":    summary.Failed,
+		"failures":  summary.Failures,
 	})
 }

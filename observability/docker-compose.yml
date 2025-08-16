@@ -17,6 +17,8 @@ services:
 
       - USER_SERVICE_URL=http://user-service:4000/users
 
+      - USER_IMPORT_WORKERS=10
+
     # ensures host.docker.internal works on Linux (Docker 20.10+)
     extra_hosts:
       - "host.docker.internal:host-gateway"
