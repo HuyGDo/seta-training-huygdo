@@ -14,7 +14,10 @@ func Connect(log *zerolog.Logger) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 
 	// close connection when shutdown application
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		// To enable sql query execution plan caching - need further testing for verification?
+		PrepareStmt: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
