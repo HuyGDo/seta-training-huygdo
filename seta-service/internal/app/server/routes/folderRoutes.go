@@ -8,13 +8,14 @@ import (
 )
 
 func RegisterFolderRoutes(rg *gin.RouterGroup, db *gorm.DB) {
-    assetController := controllers.NewFolderController(db)
+    folderController := controllers.NewFolderController(db)
     folders := rg.Group("/folders")
     {
-        folders.POST("", assetController.CreateFolder)
-        folders.GET("/:folderId", assetController.GetFolder)
-        folders.PUT("/:folderId", assetController.UpdateFolder)
-        folders.DELETE("/:folderId", assetController.DeleteFolder)
-        folders.POST("/:folderId/share", assetController.ShareFolder)
+        folders.POST("", folderController.CreateFolder)
+        folders.GET("/:folderId", folderController.GetFolder)
+        folders.PUT("/:folderId", folderController.UpdateFolder)
+        folders.DELETE("/:folderId", folderController.DeleteFolder)
+        folders.POST("/:folderId/share", folderController.ShareFolder)
+		folders.DELETE("/:folderId/share/:userId", folderController.RevokeFolderSharing)
     }
 }

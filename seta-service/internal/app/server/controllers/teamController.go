@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 	"seta/internal/pkg/errorHandling"
+	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/models"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +57,7 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return // Helper handles the error response
 	}
 
+	
 	// Check if the creator is in the provided managers list.
 	isCreatorAManager := false
 	for _, manager := range input.Managers {
@@ -100,6 +103,12 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return nil // Commit transaction
 	})
 
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+        EventType:   "TEAM_CREATED",
+        TeamID:      team.ID.String(),
+        ActionBy: creatorUserID.String(),
+    })
+
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team: " + err.Error()})
 		return
@@ -136,6 +145,14 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := tc.GetUserIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+        EventType:    "MEMBER_ADDED",
+        TeamID:       teamID.String(),
+        ActionBy:  actorUserID.String(),
+        TargetUserID: input.UserID.String(),
+    })
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -157,6 +174,14 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove member from team"})
 		return
 	}
+
+	actorUserID, _ := tc.GetUserIDFromContext(c)
+    go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+        EventType:    "MEMBER_REMOVED",
+        TeamID:       teamID.String(),
+        ActionBy:  actorUserID.String(),
+        TargetUserID: memberID.String(),
+    })
 
 	c.Status(http.StatusNoContent)
 }
@@ -181,6 +206,14 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := tc.GetUserIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+        EventType:    "MANAGER_ADDED",
+        TeamID:       teamID.String(),
+        ActionBy:  actorUserID.String(),
+        TargetUserID: input.UserID.String(),
+    })
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -202,6 +235,14 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove manager from team"})
 		return
 	}
+
+	actorUserID, _ := tc.GetUserIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+        EventType:    "MANAGER_REMOVED",
+        TeamID:       teamID.String(),
+        ActionBy:  actorUserID.String(),
+        TargetUserID: managerID.String(),
+    })
 
 	c.Status(http.StatusNoContent)
 }

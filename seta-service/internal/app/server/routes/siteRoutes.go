@@ -30,13 +30,8 @@ func SetupRouter(db *gorm.DB, log *zerolog.Logger) *gin.Engine {
         // Register modularized routes
         RegisterTeamRoutes(api, db)
         RegisterUserRoutes(api, db)
-
-        // Asset routes can be grouped together
-        assets := api.Group("/assets")
-        {
-            RegisterFolderRoutes(assets, db)
-            RegisterNoteRoutes(assets, db)
-        }
+        RegisterFolderRoutes(api, db)
+        RegisterNoteRoutes(api, db)
     }
 
     return r

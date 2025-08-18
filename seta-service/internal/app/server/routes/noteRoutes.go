@@ -8,13 +8,14 @@ import (
 )
 
 func RegisterNoteRoutes(rg *gin.RouterGroup, db *gorm.DB) {
-    noteController := controllers.NewNoteController(db)
-    notes := rg.Group("/notes")
-    {
-        notes.POST("", noteController.CreateNote)
-        notes.GET("/:noteId", noteController.GetNote)
-        notes.PUT("/:noteId", noteController.UpdateNote)
-        notes.DELETE("/:noteId", noteController.DeleteNote)
-        notes.POST("/:noteId/share", noteController.ShareNote)
-    }
+	noteController := controllers.NewNoteController(db)
+	notes := rg.Group("/notes")
+	{
+		// Note: Creation is now handled under /folders/:folderId/notes
+		notes.GET("/:noteId", noteController.GetNote)
+		notes.PUT("/:noteId", noteController.UpdateNote)
+		notes.DELETE("/:noteId", noteController.DeleteNote)
+		notes.POST("/:noteId/share", noteController.ShareNote)
+		notes.DELETE("/:noteId/share/:userId", noteController.RevokeNoteSharing)
+	}
 }
