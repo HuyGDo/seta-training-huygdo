@@ -49,8 +49,17 @@ services:
     networks:
       - monitoring
 
+  auditing-service:
+    build: ../auditing-service
+    networks:
+      - monitoring
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BROKERS=kafka:29092
+
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
+    image: confluentinc/cp-zookeeper:7.3.3
     networks:
       - monitoring
     environment:
@@ -58,7 +67,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
-    image: confluentinc/cp-kafka:7.0.1
+    image: confluentinc/cp-kafka:7.3.3
     networks:
       - monitoring
     depends_on:
