@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterFolderRoutes(rg *gin.RouterGroup, db *gorm.DB) {
-    assetController := controllers.NewAssetController(db)
+    assetController := controllers.NewFolderController(db)
     folders := rg.Group("/folders")
     {
         folders.POST("", assetController.CreateFolder)

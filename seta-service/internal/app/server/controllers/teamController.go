@@ -12,53 +12,103 @@ import (
 
 // TeamController handles team-related requests.
 type TeamController struct {
-	db *gorm.DB
+	BaseController // Embed the BaseController
 }
 
 // NewTeamController creates a new TeamController.
 func NewTeamController(db *gorm.DB) *TeamController {
-	return &TeamController{db: db}
+	// Initialize the embedded BaseController
+	return &TeamController{BaseController: NewBaseController(db)}
 }
 
 // CreateTeamInput represents the input for creating a team.
-type CreateTeamInput struct {
-	TeamName string `json:"teamName" binding:"required"`
+
+type ManagerInput struct {
+	ManagerID   uuid.UUID `json:"managerId" binding:"required"`
+	ManagerName string    `json:"managerName"` // Name is optional, we only need the ID
 }
 
-// CreateTeam creates a new team.
+type MemberInput struct {
+	MemberID   uuid.UUID `json:"memberId" binding:"required"`
+	MemberName string    `json:"memberName"` // Name is optional
+}
+
+// CreateTeamInput now matches your desired request body
+type CreateTeamInput struct {
+	TeamName string         `json:"teamName" binding:"required"`
+	Managers []ManagerInput `json:"managers" binding:"required,min=1"` // Require at least one manager
+	Members  []MemberInput  `json:"members"`
+}
+
+// CreateTeam creates a new team and adds the creator as the first manager.
 func (tc *TeamController) CreateTeam(c *gin.Context) {
 	var input CreateTeamInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid request body"})
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid request body: " + err.Error()})
 		return
 	}
 
-	userIDStr, exists := c.Get("userId")
-	if !exists {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusUnauthorized, Message: "User not authenticated"})
-		return
+	// This helper is still useful for getting the creator's ID,
+	// but the creator might not be in the managers list, so we handle that.
+	creatorUserID, ok := tc.GetUserIDFromContext(c)
+	if !ok {
+		return // Helper handles the error response
 	}
 
-	userID, err := uuid.Parse(userIDStr.(string))
-	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Invalid user ID format"})
+	// Check if the creator is in the provided managers list.
+	isCreatorAManager := false
+	for _, manager := range input.Managers {
+		if manager.ManagerID == creatorUserID {
+			isCreatorAManager = true
+			break
+		}
+	}
+
+	if !isCreatorAManager {
+		_ = c.Error(&errorHandling.CustomError{
+			Code:    http.StatusBadRequest,
+			Message: "The user creating the team must be included in the managers list.",
+		})
 		return
 	}
 
 	team := models.Team{TeamName: input.TeamName}
-	if err := tc.db.WithContext(c.Request.Context()).Create(&team).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team"})
+
+	// Use a transaction to create the team, managers, and members atomically
+	err := tc.db.WithContext(c.Request.Context()).Transaction(func(tx *gorm.DB) error {
+		// 1. Create the team
+		if err := tx.Create(&team).Error; err != nil {
+			return err
+		}
+
+		// 2. Create the managers from the input list
+		for _, manager := range input.Managers {
+			teamManager := models.TeamManager{TeamID: team.ID, UserID: manager.ManagerID}
+			if err := tx.Create(&teamManager).Error; err != nil {
+				return err
+			}
+		}
+
+		// 3. Create the members from the input list
+		for _, member := range input.Members {
+			teamMember := models.TeamMember{TeamID: team.ID, UserID: member.MemberID}
+			if err := tx.Create(&teamMember).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil // Commit transaction
+	})
+
+	if err != nil {
+		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team: " + err.Error()})
 		return
 	}
 
-	// FIX: Use GORM's Create method on the join table model
-	teamManager := models.TeamManager{TeamID: team.ID, UserID: userID}
-	if err := tc.db.WithContext(c.Request.Context()).Create(&teamManager).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, team)
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Team created successfully",
+		"team":    team,
+	})
 }
 
 // AddRemoveMemberInput represents the input for adding or removing a team member.
@@ -80,7 +130,6 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use GORM's Create method on the join table model
 	teamMember := models.TeamMember{TeamID: teamID, UserID: input.UserID}
 	if err := tc.db.WithContext(c.Request.Context()).Create(&teamMember).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add member to team"})
@@ -104,7 +153,6 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use GORM's Delete method on the join table model
 	if err := tc.db.WithContext(c.Request.Context()).Delete(&models.TeamMember{TeamID: teamID, UserID: memberID}).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove member from team"})
 		return
@@ -127,7 +175,6 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use GORM's Create method on the join table model
 	teamManager := models.TeamManager{TeamID: teamID, UserID: input.UserID}
 	if err := tc.db.WithContext(c.Request.Context()).Create(&teamManager).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to add manager to team"})
@@ -151,7 +198,6 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use GORM's Delete method on the join table model
 	if err := tc.db.WithContext(c.Request.Context()).Delete(&models.TeamManager{TeamID: teamID, UserID: managerID}).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to remove manager from team"})
 		return

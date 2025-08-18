@@ -8,13 +8,13 @@ import (
 )
 
 func RegisterNoteRoutes(rg *gin.RouterGroup, db *gorm.DB) {
-    assetController := controllers.NewAssetController(db)
+    noteController := controllers.NewNoteController(db)
     notes := rg.Group("/notes")
     {
-        notes.POST("", assetController.CreateNote)
-        notes.GET("/:noteId", assetController.GetNote)
-        notes.PUT("/:noteId", assetController.UpdateNote)
-        notes.DELETE("/:noteId", assetController.DeleteNote)
-        notes.POST("/:noteId/share", assetController.ShareNote)
+        notes.POST("", noteController.CreateNote)
+        notes.GET("/:noteId", noteController.GetNote)
+        notes.PUT("/:noteId", noteController.UpdateNote)
+        notes.DELETE("/:noteId", noteController.DeleteNote)
+        notes.POST("/:noteId/share", noteController.ShareNote)
     }
 }

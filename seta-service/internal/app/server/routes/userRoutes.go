@@ -10,13 +10,12 @@ import (
 )
 
 func RegisterUserRoutes(rg *gin.RouterGroup, db *gorm.DB) {
-	assetController := controllers.NewAssetController(db)
 	userService := services.NewUserService()
-	userController := controllers.NewUserController(userService)
+	userController := controllers.NewUserController(db, userService)
 
 	users := rg.Group("/users")
 	{
-		users.GET("/:userId/assets", assetController.GetUserAssets)
+		users.GET("/:userId/assets", userController.GetUserAssets)
 		users.POST("/import", middlewares.IsAuthorized("MANAGER"), userController.ImportUsers)
 	}
 }
