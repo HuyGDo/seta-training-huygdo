@@ -11,7 +11,7 @@ import (
 func RegisterTeamRoutes(rg *gin.RouterGroup, db *gorm.DB) {
 	teamController := controllers.NewTeamController(db)
 	teams := rg.Group("/teams")
-	teams.Use(middlewares.IsAuthorized("MANAGER"))
+	teams.Use(middlewares.IsAuthorizedRole("MANAGER"))
 	{
 		teams.POST("", teamController.CreateTeam)
 		teams.POST("/:teamId/members", teamController.AddMember)

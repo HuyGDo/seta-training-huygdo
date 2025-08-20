@@ -25,5 +25,6 @@
 
 # Go workspace file
 go.work
+go.sum
 
-# End of https://www.toptal.com/developers/gitignore/api/go
+# End of https://www.toptal.com/developers/gitignore/api/goåç

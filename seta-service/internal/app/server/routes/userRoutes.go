@@ -16,6 +16,6 @@ func RegisterUserRoutes(rg *gin.RouterGroup, db *gorm.DB) {
 	users := rg.Group("/users")
 	{
 		users.GET("/:userId/assets", userController.GetUserAssets)
-		users.POST("/import", middlewares.IsAuthorized("MANAGER"), userController.ImportUsers)
+		users.POST("/import", middlewares.IsAuthorizedRole("MANAGER"), userController.ImportUsers)
 	}
 }

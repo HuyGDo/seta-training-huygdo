@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func IsAuthorized(authorizedRoles ...string) gin.HandlerFunc {
+func IsAuthorizedRole(authorizedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists {
@@ -15,15 +15,15 @@ func IsAuthorized(authorizedRoles ...string) gin.HandlerFunc {
 		}
 
 		userRole := role.(string)
-		isAuthorized := false
+		IsAuthorizedRole := false
 		for _, authorizedRole := range authorizedRoles {
 			if userRole == authorizedRole {
-				isAuthorized = true
+				IsAuthorizedRole = true
 				break
 			}
 		}
 
-		if !isAuthorized {
+		if !IsAuthorizedRole {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You are not authorized to perform this action"})
 			return
 		}
