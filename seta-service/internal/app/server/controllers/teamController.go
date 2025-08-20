@@ -26,6 +26,7 @@ func NewTeamController(db *gorm.DB) *TeamController {
 type ManagerInput struct {
 	ManagerID   uuid.UUID `json:"managerId" binding:"required"`
 	ManagerName string    `json:"managerName"`
+	IsLead      bool      `json:"isLead"`
 }
 
 type MemberInput struct {
@@ -47,21 +48,24 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	// Use the new utility function to get the creator's ID.
 	creatorUserID, err := utils.GetUserUUIDFromContext(c)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	isCreatorAManager := false
+	var leadManagerCount int
+	var isCreatorAManager bool
 	for _, manager := range input.Managers {
 		if manager.ManagerID == creatorUserID {
 			isCreatorAManager = true
-			break
+		}
+		if manager.IsLead {
+			leadManagerCount++
 		}
 	}
 
+	// Validation: Ensure the creator is in the manager list
 	if !isCreatorAManager {
 		_ = c.Error(&errorHandling.CustomError{
 			Code:    http.StatusBadRequest,
@@ -70,15 +74,23 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
+	// Validation: Ensure there is exactly one lead manager
+	if leadManagerCount != 1 {
+		_ = c.Error(&errorHandling.CustomError{
+			Code:    http.StatusBadRequest,
+			Message: "Exactly one manager must be designated as the lead (isLead: true).",
+		})
+		return
+	}
+
 	team := models.Team{TeamName: input.TeamName}
 
 	err = tc.db.WithContext(c.Request.Context()).Transaction(func(tx *gorm.DB) error {
-		// ... (transaction logic remains the same)
 		if err := tx.Create(&team).Error; err != nil {
 			return err
 		}
 		for _, manager := range input.Managers {
-			teamManager := models.TeamManager{TeamID: team.ID, UserID: manager.ManagerID}
+			teamManager := models.TeamManager{TeamID: team.ID, UserID: manager.ManagerID, IsLead: manager.IsLead}
 			if err := tx.Create(&teamManager).Error; err != nil {
 				return err
 			}

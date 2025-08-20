@@ -90,3 +90,13 @@
 {"level":"fatal","error":"failed to connect to database: failed to connect to `user=huygdo database=seta_service_db`: 192.168.65.254:5432 (host.docker.internal): dial error: dial tcp 192.168.65.254:5432: connect: connection refused","time":"2025-08-18T18:09:27Z","message":"could not connect to database"}
 {"level":"info","time":"2025-08-18T18:12:01Z","message":"Database connection successful."}
 {"level":"info","time":"2025-08-18T18:12:01Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-20T20:18:29Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:18:29Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-20T20:47:52Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:47:52Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":400,"latency":67.409084,"client_ip":"192.168.65.1","time":"2025-08-20T20:52:24Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":401,"latency":18.542083,"client_ip":"192.168.65.1","time":"2025-08-20T20:54:20Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":41.647417,"client_ip":"192.168.65.1","time":"2025-08-20T20:55:23Z","message":"Request handled"}
+{"level":"info","time":"2025-08-20T20:59:56Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:59:56Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":29.18475,"client_ip":"192.168.65.1","time":"2025-08-20T21:00:28Z","message":"Request handled"}

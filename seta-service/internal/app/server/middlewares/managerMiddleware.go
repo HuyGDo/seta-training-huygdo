@@ -49,7 +49,6 @@ func IsTeamManager(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// In a new middleware file
 func IsLeadManager(db *gorm.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
         teamID, err := utils.GetUUIDFromParam(c, "teamId")
