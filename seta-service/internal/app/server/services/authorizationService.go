@@ -1,11 +1,14 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"seta/internal/pkg/database"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/models"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -19,7 +22,6 @@ func NewAuthorizationService(db *gorm.DB) *AuthorizationService {
 	return &AuthorizationService{db: db}
 }
 
-// IsAssetOwner is now updated to return *errorHandling.CustomError consistently.
 func (s *AuthorizationService) IsAssetOwner(userID uuid.UUID, assetType string, assetID uuid.UUID) (bool, *errorHandling.CustomError) {
 	var ownerID uuid.UUID
 	var err error
@@ -43,66 +45,81 @@ func (s *AuthorizationService) IsAssetOwner(userID uuid.UUID, assetType string, 
 	return userID == ownerID, nil
 }
 
-// CanAccessAsset is updated to correctly handle the custom error from IsAssetOwner.
 func (s *AuthorizationService) CanAccessAsset(userID uuid.UUID, assetType string, assetID uuid.UUID) (bool, *errorHandling.CustomError) {
-	isOwner, err := s.IsAssetOwner(userID, assetType, assetID)
-	if err != nil || isOwner {
-		return isOwner, err
+	isOwner, ownerErr := s.IsAssetOwner(userID, assetType, assetID)
+	if ownerErr != nil || isOwner {
+		return isOwner, ownerErr
 	}
 
-	switch assetType {
-	case "folder":
-		var count int64
-		if dbErr := s.db.Model(&models.FolderShare{}).Where("folder_id = ? AND user_id = ?", assetID, userID).Count(&count).Error; dbErr != nil {
-			return false, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking folder share"}
-		}
-		return count > 0, nil
-
-	case "note":
-		var count int64
-		if dbErr := s.db.Model(&models.NoteShare{}).Where("note_id = ? AND user_id = ?", assetID, userID).Count(&count).Error; dbErr != nil {
-			return false, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking note share"}
-		}
-		if count > 0 {
-			return true, nil
-		}
-
-		var note models.Note
-		s.db.Select("folder_id").First(&note, "note_id = ?", assetID)
-		return s.CanAccessAsset(userID, "folder", note.FolderID)
+	access, err := s.getAccessFromCacheOrDB(userID, assetType, assetID)
+	if err != nil {
+		return false, err
 	}
 
-	return false, nil
+	return access == "read" || access == "write", nil
 }
 
-// CanWriteAsset is also updated to correctly handle the custom error.
 func (s *AuthorizationService) CanWriteAsset(userID uuid.UUID, assetType string, assetID uuid.UUID) (bool, *errorHandling.CustomError) {
-	isOwner, err := s.IsAssetOwner(userID, assetType, assetID)
-	if err != nil || isOwner {
-		return isOwner, err
+	isOwner, ownerErr := s.IsAssetOwner(userID, assetType, assetID)
+	if ownerErr != nil || isOwner {
+		return isOwner, ownerErr
 	}
+
+	access, err := s.getAccessFromCacheOrDB(userID, assetType, assetID)
+	if err != nil {
+		return false, err
+	}
+
+	return access == "write", nil
+}
+
+func (s *AuthorizationService) getAccessFromCacheOrDB(userID uuid.UUID, assetType string, assetID uuid.UUID) (string, *errorHandling.CustomError) {
+	ctx := context.Background()
+	aclCacheKey := "asset:" + assetID.String() + ":acl"
+
+	userAccess, err := database.Rdb.HGet(ctx, aclCacheKey, userID.String()).Result()
+	if err == nil {
+		return userAccess, nil
+	}
+
+	acl, customErr := s.fetchAndBuildACL(assetType, assetID)
+	if customErr != nil {
+		return "", customErr
+	}
+
+	if len(acl) > 0 {
+		database.Rdb.HSet(ctx, aclCacheKey, acl)
+		database.Rdb.Expire(ctx, aclCacheKey, 1*time.Hour)
+	}
+
+	if access, ok := acl[userID.String()]; ok {
+		return access.(string), nil
+	}
+
+	return "", nil
+}
+
+func (s *AuthorizationService) fetchAndBuildACL(assetType string, assetID uuid.UUID) (map[string]interface{}, *errorHandling.CustomError) {
+	acl := make(map[string]interface{})
 
 	switch assetType {
 	case "folder":
-		var count int64
-		if dbErr := s.db.Model(&models.FolderShare{}).Where("folder_id = ? AND user_id = ? AND access = 'write'", assetID, userID).Count(&count).Error; dbErr != nil {
-			return false, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking folder write access"}
+		var shares []models.FolderShare
+		if err := s.db.Where("folder_id = ?", assetID).Find(&shares).Error; err != nil {
+			return nil, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking folder shares"}
 		}
-		return count > 0, nil
-
+		for _, share := range shares {
+			acl[share.UserID.String()] = share.Access
+		}
 	case "note":
-		var count int64
-		if dbErr := s.db.Model(&models.NoteShare{}).Where("note_id = ? AND user_id = ? AND access = 'write'", assetID, userID).Count(&count).Error; dbErr != nil {
-			return false, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking note write access"}
+		var shares []models.NoteShare
+		if err := s.db.Where("note_id = ?", assetID).Find(&shares).Error; err != nil {
+			return nil, &errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Database error checking note shares"}
 		}
-		if count > 0 {
-			return true, nil
+		for _, share := range shares {
+			acl[share.UserID.String()] = share.Access
 		}
-
-		var note models.Note
-		s.db.Select("folder_id").First(&note, "note_id = ?", assetID)
-		return s.CanWriteAsset(userID, "folder", note.FolderID)
 	}
 
-	return false, nil
+	return acl, nil
 }

@@ -31,24 +31,26 @@ func AssetAccessMiddleware(assetType string, assetIDParamName string, checkFunc 
 			return
 		}
 
-		// The core permission logic remains the same.
+		// TAUTOLOGICAL ERROR --> Cant fix
 		// hasPermission, err := checkFunc(authorization, userID, assetID)
-		// if err.Code != 0 {
+		// if err != nil {
 		// 	_ = c.Error(err)
 		// 	c.Abort()
 		// 	return
 		// }
 
 		hasPermission, customErr := checkFunc(authorization, userID, assetID)
-		if customErr.Code != 0 {
+		if customErr != nil {
+			if customErr.Code == 0 {
+			  customErr.Code = http.StatusInternalServerError
+			}
 			_ = c.Error(customErr)
 			c.Abort()
 			return
-		}
+		  }
 			
 
 		if !hasPermission {
-			// The error is now handled by the centralized error middleware
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized for this action"})
 			c.Abort()
 			return

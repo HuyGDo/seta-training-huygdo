@@ -1,9 +1,12 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -24,4 +27,27 @@ func Connect(log *zerolog.Logger) (*gorm.DB, error) {
 
 	log.Info().Msg("Database connection successful.")
 	return db, nil
+}
+
+var Rdb *redis.Client
+
+func ConnectRedis(log *zerolog.Logger) error {
+	redisAddr := os.Getenv("REDIS_URL")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379" // Fallback for local dev
+	}
+
+	Rdb = redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := Rdb.Ping(ctx).Result(); err != nil {
+		return fmt.Errorf("could not connect to Redis: %w", err)
+	}
+
+	log.Info().Msg("Redis connection successful.")
+	return nil
 }
