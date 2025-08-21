@@ -93,13 +93,14 @@ func (s *UserService) worker(jobs <-chan userJob, results chan<- jobResult, wg *
 }
 
 // callCreateUserMutation sends a GraphQL mutation to the user-service.
+// should move to pkg or sdk userClient
 func (s *UserService) callCreateUserMutation(record []string) error {
 	userServiceURL := os.Getenv("USER_SERVICE_URL")
-    
+
 	if userServiceURL == "" {
-        userServiceURL = "http://localhost:4000/users" // Default for local dev
-    }
-	
+		userServiceURL = "http://localhost:4000/users" // Default for local dev
+	}
+
 	if len(record) < 4 {
 		return fmt.Errorf("invalid record: not enough columns")
 	}
@@ -111,6 +112,7 @@ func (s *UserService) callCreateUserMutation(record []string) error {
 		"role":     record[3],
 	}
 
+	// move to const
 	query := gin.H{
 		"query": `
             mutation CreateUser($input: CreateUserInput!) {
