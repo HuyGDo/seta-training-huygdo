@@ -100,3 +100,31 @@
 {"level":"info","time":"2025-08-20T20:59:56Z","message":"Database connection successful."}
 {"level":"info","time":"2025-08-20T20:59:56Z","message":"Starting server on port 8080"}
 {"level":"info","method":"POST","path":"/api/teams","status":201,"latency":29.18475,"client_ip":"192.168.65.1","time":"2025-08-20T21:00:28Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T04:36:30Z","message":"Database connection successful."}
+{"level":"fatal","error":"could not connect to Redis: dial tcp [::1]:6379: connect: connection refused","time":"2025-08-21T04:36:30Z","message":"could not connect to Redis"}
+{"level":"info","time":"2025-08-21T04:41:31Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T04:41:31Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T04:41:31Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/folders","status":201,"latency":49.748167,"client_ip":"192.168.65.1","time":"2025-08-21T04:57:30Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":500,"latency":28.754167,"client_ip":"192.168.65.1","time":"2025-08-21T04:59:32Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T05:04:04Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T05:04:04Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T05:04:04Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":500,"latency":35.395916,"client_ip":"192.168.65.1","time":"2025-08-21T05:04:11Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":500,"latency":39.896208,"client_ip":"192.168.65.1","time":"2025-08-21T05:04:34Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T05:07:06Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T05:07:06Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T05:07:06Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":500,"latency":39.640834,"client_ip":"192.168.65.1","time":"2025-08-21T05:07:11Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T05:09:28Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T05:09:28Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T05:09:28Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":500,"latency":54.384375,"client_ip":"192.168.65.1","time":"2025-08-21T05:09:52Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T05:15:07Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T05:15:07Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T05:15:07Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":201,"latency":48.243833,"client_ip":"192.168.65.1","time":"2025-08-21T05:15:29Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":66.9015,"client_ip":"192.168.65.1","time":"2025-08-21T05:18:16Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":404,"latency":0.670083,"client_ip":"192.168.65.1","time":"2025-08-21T05:27:33Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":401,"latency":23.828708,"client_ip":"192.168.65.1","time":"2025-08-21T05:29:55Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":204,"latency":13.626208,"client_ip":"192.168.65.1","time":"2025-08-21T05:30:04Z","message":"Request handled"}

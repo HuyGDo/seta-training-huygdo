@@ -17,6 +17,7 @@ CREATE TABLE teams (
 CREATE TABLE team_managers (
     team_id UUID NOT NULL,
     user_id UUID NOT NULL,
+    is_lead BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
