@@ -11,6 +11,8 @@ import (
 
 // Connect connects to the database and returns a GORM DB instance.
 func Connect(log *zerolog.Logger) (*gorm.DB, error) {
+	// put to config package
+	// manage environment in one place so can easily check, validate, and change
 	dsn := os.Getenv("DATABASE_URL")
 
 	// close connection when shutdown application

@@ -34,6 +34,7 @@ type CreateFolderInput struct {
 func (ac *AssetController) CreateFolder(c *gin.Context) {
 	var input CreateFolderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
+		// set a constructed error response
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
@@ -56,6 +57,7 @@ func (ac *AssetController) CreateFolder(c *gin.Context) {
 	}
 
 	if err := ac.db.WithContext(c.Request.Context()).Create(&folder).Error; err != nil {
+		// log.Error...
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create folder"})
 		return
 	}
@@ -92,6 +94,9 @@ func (ac *AssetController) GetFolder(c *gin.Context) {
 	if folder.OwnerID != userID {
 		// Check if the folder is shared with the user
 		var share models.FolderShare
+		// don't recommend this, it is hardcode, when you change column, you need to change this too
+		// try to use like this:
+		//db.Where(&model.FolderShare{FolderID: "abc", UserID: 20})
 		if err := ac.db.WithContext(c.Request.Context()).Where("folder_id = ? AND user_id = ?", folder.FolderID, userID).First(&share).Error; err != nil {
 			_ = c.Error(&errorHandling.CustomError{Code: http.StatusForbidden, Message: "You are not authorized to view this folder"})
 			return
@@ -182,6 +187,7 @@ func (ac *AssetController) DeleteFolder(c *gin.Context) {
 	}
 
 	// Delete associated notes and shares
+	// handle error
 	ac.db.WithContext(c.Request.Context()).Where("folder_id = ?", folder.FolderID).Delete(&models.Note{})
 	ac.db.WithContext(c.Request.Context()).Where("folder_id = ?", folder.FolderID).Delete(&models.FolderShare{})
 	if err := ac.db.WithContext(c.Request.Context()).Delete(&folder).Error; err != nil {
