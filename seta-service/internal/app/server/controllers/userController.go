@@ -5,23 +5,23 @@ import (
 	"seta/internal/app/server/services"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/models"
+	"seta/internal/pkg/utils" // Import the new utils package
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // UserController handles user-related HTTP requests.
 type UserController struct {
-	BaseController // Embed BaseController for DB access and helpers
-	userService    *services.UserService
+	db          *gorm.DB
+	userService *services.UserService
 }
 
 // NewUserController creates a new UserController.
 func NewUserController(db *gorm.DB, userService *services.UserService) *UserController {
 	return &UserController{
-		BaseController: NewBaseController(db),
-		userService:    userService,
+		db:          db,
+		userService: userService,
 	}
 }
 
@@ -40,14 +40,13 @@ func (uc *UserController) ImportUsers(c *gin.Context) {
 	}
 	defer openedFile.Close()
 
-	// C.1: Context Propagation - Pass the request context to the service.
 	summary, err := uc.userService.ImportUsers(c.Request.Context(), openedFile)
 	if err != nil {
+		// Pass the error from the service to the error handling middleware
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: err.Error()})
 		return
 	}
 
-	// B.2: Detailed Failure Reasons - Return the detailed summary.
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "User import process completed.",
 		"succeeded": summary.Succeeded,
@@ -56,21 +55,20 @@ func (uc *UserController) ImportUsers(c *gin.Context) {
 	})
 }
 
-
-
-
 // GetUserAssets retrieves all assets owned by or shared with a specific user.
 func (uc *UserController) GetUserAssets(c *gin.Context) {
-	targetUserID, err := uuid.Parse(c.Param("userId"))
+	// Use the utility function to get the target user's ID from the URL param.
+	targetUserID, err := utils.GetUUIDFromParam(c, "userId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid user ID"})
+		_ = c.Error(err)
 		return
 	}
 
-	// Use the helper from BaseController to get the authenticated user's ID
-	authUserID, ok := uc.GetUserIDFromContext(c)
-	if !ok {
-		return // Helper handles the error response
+	// Use the utility function to get the authenticated user's ID from the context.
+	authUserID, err := utils.GetUserUUIDFromContext(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	// Authorization check

@@ -1,46 +1,46 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 	"seta/internal/pkg/errorHandling"
+	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/models"
+	"seta/internal/pkg/utils" // Import the new utils package
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// TeamController handles team-related requests.
+// TeamController now has its own db field and no longer embeds BaseController.
 type TeamController struct {
-	BaseController // Embed the BaseController
+	db *gorm.DB
 }
 
-// NewTeamController creates a new TeamController.
+// NewTeamController creates a new TeamController, injecting the db dependency.
 func NewTeamController(db *gorm.DB) *TeamController {
-	// Initialize the embedded BaseController
-	return &TeamController{BaseController: NewBaseController(db)}
+	return &TeamController{db: db}
 }
-
-// CreateTeamInput represents the input for creating a team.
 
 type ManagerInput struct {
 	ManagerID   uuid.UUID `json:"managerId" binding:"required"`
-	ManagerName string    `json:"managerName"` // Name is optional, we only need the ID
+	ManagerName string    `json:"managerName"`
+	IsLead      bool      `json:"isLead"`
 }
 
 type MemberInput struct {
 	MemberID   uuid.UUID `json:"memberId" binding:"required"`
-	MemberName string    `json:"memberName"` // Name is optional
+	MemberName string    `json:"memberName"`
 }
 
-// CreateTeamInput now matches your desired request body
 type CreateTeamInput struct {
 	TeamName string         `json:"teamName" binding:"required"`
-	Managers []ManagerInput `json:"managers" binding:"required,min=1"` // Require at least one manager
+	Managers []ManagerInput `json:"managers" binding:"required,min=1"`
 	Members  []MemberInput  `json:"members"`
 }
 
-// CreateTeam creates a new team and adds the creator as the first manager.
+// CreateTeam creates a new team.
 func (tc *TeamController) CreateTeam(c *gin.Context) {
 	var input CreateTeamInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -48,22 +48,24 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	// This helper is still useful for getting the creator's ID,
-	// but the creator might not be in the managers list, so we handle that.
-	creatorUserID, ok := tc.GetUserIDFromContext(c)
-	if !ok {
-		return // Helper handles the error response
+	creatorUserID, err := utils.GetUserUUIDFromContext(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
 	}
 
-	// Check if the creator is in the provided managers list.
-	isCreatorAManager := false
+	var leadManagerCount int
+	var isCreatorAManager bool
 	for _, manager := range input.Managers {
 		if manager.ManagerID == creatorUserID {
 			isCreatorAManager = true
-			break
+		}
+		if manager.IsLead {
+			leadManagerCount++
 		}
 	}
 
+	// Validation: Ensure the creator is in the manager list
 	if !isCreatorAManager {
 		_ = c.Error(&errorHandling.CustomError{
 			Code:    http.StatusBadRequest,
@@ -72,38 +74,47 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 		return
 	}
 
+	// Validation: Ensure there is exactly one lead manager
+	if leadManagerCount != 1 {
+		_ = c.Error(&errorHandling.CustomError{
+			Code:    http.StatusBadRequest,
+			Message: "Exactly one manager must be designated as the lead (isLead: true).",
+		})
+		return
+	}
+
 	team := models.Team{TeamName: input.TeamName}
 
-	// Use a transaction to create the team, managers, and members atomically
-	err := tc.db.WithContext(c.Request.Context()).Transaction(func(tx *gorm.DB) error {
-		// 1. Create the team
+	err = tc.db.WithContext(c.Request.Context()).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&team).Error; err != nil {
 			return err
 		}
-
-		// 2. Create the managers from the input list
 		for _, manager := range input.Managers {
-			teamManager := models.TeamManager{TeamID: team.ID, UserID: manager.ManagerID}
+			teamManager := models.TeamManager{TeamID: team.ID, UserID: manager.ManagerID, IsLead: manager.IsLead}
 			if err := tx.Create(&teamManager).Error; err != nil {
 				return err
 			}
 		}
-
-		// 3. Create the members from the input list
 		for _, member := range input.Members {
 			teamMember := models.TeamMember{TeamID: team.ID, UserID: member.MemberID}
 			if err := tx.Create(&teamMember).Error; err != nil {
 				return err
 			}
 		}
-
-		return nil // Commit transaction
+		return nil
 	})
 
 	if err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create team: " + err.Error()})
 		return
 	}
+	
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+		EventType: "TEAM_CREATED",
+		TeamID:    team.ID.String(),
+		ActionBy:  creatorUserID.String(),
+	})
+
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Team created successfully",
@@ -111,16 +122,15 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 	})
 }
 
-// AddRemoveMemberInput represents the input for adding or removing a team member.
 type AddRemoveMemberInput struct {
 	UserID uuid.UUID `json:"userId" binding:"required"`
 }
 
 // AddMember adds a member to a team.
 func (tc *TeamController) AddMember(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("teamId"))
+	teamID, err := utils.GetUUIDFromParam(c, "teamId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
+		_ = c.Error(err)
 		return
 	}
 
@@ -136,20 +146,28 @@ func (tc *TeamController) AddMember(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := utils.GetUserUUIDFromContext(c) // Error already handled by auth middleware
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+		EventType:    "MEMBER_ADDED",
+		TeamID:       teamID.String(),
+		ActionBy:     actorUserID.String(),
+		TargetUserID: input.UserID.String(),
+	})
+
 	c.Status(http.StatusNoContent)
 }
 
 // RemoveMember removes a member from a team.
 func (tc *TeamController) RemoveMember(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("teamId"))
+	teamID, err := utils.GetUUIDFromParam(c, "teamId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
+		_ = c.Error(err)
 		return
 	}
 
-	memberID, err := uuid.Parse(c.Param("memberId"))
+	memberID, err := utils.GetUUIDFromParam(c, "memberId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid member ID"})
+		_ = c.Error(err)
 		return
 	}
 
@@ -158,14 +176,22 @@ func (tc *TeamController) RemoveMember(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := utils.GetUserUUIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+		EventType:    "MEMBER_REMOVED",
+		TeamID:       teamID.String(),
+		ActionBy:     actorUserID.String(),
+		TargetUserID: memberID.String(),
+	})
+
 	c.Status(http.StatusNoContent)
 }
 
 // AddManager adds a manager to a team.
 func (tc *TeamController) AddManager(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("teamId"))
+	teamID, err := utils.GetUUIDFromParam(c, "teamId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
+		_ = c.Error(err)
 		return
 	}
 
@@ -181,20 +207,28 @@ func (tc *TeamController) AddManager(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := utils.GetUserUUIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+		EventType:    "MANAGER_ADDED",
+		TeamID:       teamID.String(),
+		ActionBy:     actorUserID.String(),
+		TargetUserID: input.UserID.String(),
+	})
+
 	c.Status(http.StatusNoContent)
 }
 
 // RemoveManager removes a manager from a team.
 func (tc *TeamController) RemoveManager(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("teamId"))
+	teamID, err := utils.GetUUIDFromParam(c, "teamId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
+		_ = c.Error(err)
 		return
 	}
 
-	managerID, err := uuid.Parse(c.Param("managerId"))
+	managerID, err := utils.GetUUIDFromParam(c, "managerId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid manager ID"})
+		_ = c.Error(err)
 		return
 	}
 
@@ -203,14 +237,22 @@ func (tc *TeamController) RemoveManager(c *gin.Context) {
 		return
 	}
 
+	actorUserID, _ := utils.GetUserUUIDFromContext(c)
+	go kafka.ProduceTeamEvent(context.Background(), kafka.EventPayload{
+		EventType:    "MANAGER_REMOVED",
+		TeamID:       teamID.String(),
+		ActionBy:     actorUserID.String(),
+		TargetUserID: managerID.String(),
+	})
+
 	c.Status(http.StatusNoContent)
 }
 
 // GetTeamAssets retrieves all assets belonging to or shared with a team's members.
 func (tc *TeamController) GetTeamAssets(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("teamId"))
+	teamID, err := utils.GetUUIDFromParam(c, "teamId")
 	if err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusBadRequest, Message: "Invalid team ID"})
+		_ = c.Error(err)
 		return
 	}
 

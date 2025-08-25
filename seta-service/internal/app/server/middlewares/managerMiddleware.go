@@ -3,7 +3,9 @@ package middlewares
 import (
 	"errors"
 	"net/http"
+	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/models"
+	"seta/internal/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -45,4 +47,35 @@ func IsTeamManager(db *gorm.DB) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func IsLeadManager(db *gorm.DB) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        teamID, err := utils.GetUUIDFromParam(c, "teamId")
+		if err != nil {
+			_ = c.Error(err) 
+			c.Abort()
+			return
+		}
+
+		userID, err := utils.GetUserUUIDFromContext(c)
+		if err != nil {
+			_ = c.Error(err)
+			c.Abort()
+			return
+		}
+
+
+        var manager models.TeamManager
+        err = db.Where("team_id = ? AND user_id = ? AND is_lead = ?", teamID, userID, true).First(&manager).Error
+        if err != nil {
+            _ = c.Error(&errorHandling.CustomError{
+                Code: http.StatusForbidden, 
+                Message: "You must be a lead manager to perform this action",
+            })
+            c.Abort() 
+            return
+        }
+        c.Next()
+    }
 }

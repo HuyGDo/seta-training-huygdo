@@ -12,6 +12,7 @@ type Team struct {
 type TeamManager struct {
     TeamID uuid.UUID `gorm:"primaryKey"`
     UserID uuid.UUID `gorm:"primaryKey"`
+    IsLead bool `gorm:"default:false"`
 }
 
 func (TeamManager) TableName() string {
