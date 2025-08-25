@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // NoteController no longer embeds BaseController.
@@ -204,7 +205,12 @@ func (nc *NoteController) ShareNote(c *gin.Context) {
 		Access: input.Access,
 	}
 
-	if err := nc.db.WithContext(c.Request.Context()).Create(&share).Error; err != nil {
+	if err := nc.db.WithContext(c.Request.Context()).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "note_id"}, {Name: "user_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{"access"}),
+		}).
+		Create(&share).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share note"})
 		return
 	}

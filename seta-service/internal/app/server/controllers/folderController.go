@@ -60,7 +60,7 @@ func (fc *FolderController) CreateFolder(c *gin.Context) {
 	ctx := c.Request.Context()
 	cacheKey := "folder:" + folder.FolderID.String()
 	folderJSON, _ := json.Marshal(folder)
-	database.Rdb.Set(ctx, cacheKey, folderJSON, 24*time.Hour)
+	database.Rdb.Set(ctx, cacheKey, folderJSON, 24*time.Hour) //  
 
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType: "FOLDER_CREATED",

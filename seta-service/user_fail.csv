@@ -1,5 +1,9 @@
 username,email,password,role
-new_manager_hank,hank.manager@example.com,HankPass123!,MANAGER
-new_member_peggy,peggy.member@example.com,PeggyPass123!,MEMBER
-new_member_bobby,bobby.member@example.com,BobbyPass123!,MEMBER
-new_member_luanne,luanne.member@example.com,LuannePass123!,MEMBER
+invalid_email_user,not-an-email,ValidPass123!,MEMBER
+duplicate_email,duplicate@example.com,ValidPass123!,MEMBER
+duplicate_email,duplicate@example.com,AnotherPass456$,MANAGER
+short_password,short@example.com,Short1!,MEMBER
+no_special_char,nospecial@example.com,NoSpecial1,MANAGER
+no_uppercase,noupper@example.com,noupper123!,MEMBER
+invalid_role,badrole@example.com,ValidPass123!,ADMIN
+missing_column,missing@example.com,ValidPass123!

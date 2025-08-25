@@ -128,3 +128,21 @@
 {"level":"info","method":"POST","path":"/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":404,"latency":0.670083,"client_ip":"192.168.65.1","time":"2025-08-21T05:27:33Z","message":"Request handled"}
 {"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":401,"latency":23.828708,"client_ip":"192.168.65.1","time":"2025-08-21T05:29:55Z","message":"Request handled"}
 {"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":204,"latency":13.626208,"client_ip":"192.168.65.1","time":"2025-08-21T05:30:04Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6","status":200,"latency":23.306417,"client_ip":"192.168.65.1","time":"2025-08-21T05:40:40Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":500,"latency":106.541791,"client_ip":"192.168.65.1","time":"2025-08-21T05:41:14Z","message":"Request handled"}
+{"level":"info","method":"DELETE","path":"/teams/5bbef6a5-b90e-4831-9168-eb701a254c6d/assets","status":404,"latency":0.553833,"client_ip":"192.168.65.1","time":"2025-08-21T05:42:21Z","message":"Request handled"}
+{"level":"info","method":"DELETE","path":"//teams/5bbef6a5-b90e-4831-9168-eb701a254c6d/assets","status":404,"latency":0.01775,"client_ip":"192.168.65.1","time":"2025-08-21T05:42:30Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/teams/5bbef6a5-b90e-4831-9168-eb701a254c6d/assets","status":200,"latency":41.229875,"client_ip":"192.168.65.1","time":"2025-08-21T05:43:48Z","message":"Request handled"}
+{"level":"info","time":"2025-08-21T05:45:54Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-21T05:45:54Z","message":"Redis connection successful."}
+{"level":"info","time":"2025-08-21T05:45:54Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share","status":204,"latency":47.183666,"client_ip":"192.168.65.1","time":"2025-08-21T05:46:02Z","message":"Request handled"}
+{"level":"info","method":"DELETE","path":"/b04eb86f-44c6-4b24-877d-e273bce519d6/share/651f484e-c57a-4bce-90b2-2fb5f5502127","status":404,"latency":0.362667,"client_ip":"192.168.65.1","time":"2025-08-21T05:47:34Z","message":"Request handled"}
+{"level":"info","method":"DELETE","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6/share/651f484e-c57a-4bce-90b2-2fb5f5502127","status":204,"latency":47.474833,"client_ip":"192.168.65.1","time":"2025-08-21T05:47:47Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/notes/b04eb86f-44c6-4b24-877d-e273bce519d6","status":200,"latency":39.872,"client_ip":"192.168.65.1","time":"2025-08-21T05:55:13Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/folders/18686487-b993-429c-ad88-5455a943449b/notes","status":201,"latency":20.628125,"client_ip":"192.168.65.1","time":"2025-08-21T06:00:55Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/notes/29b1338b-a957-4c76-9b0c-84c9f25f18a0/share","status":204,"latency":22.63675,"client_ip":"192.168.65.1","time":"2025-08-21T06:01:05Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/notes/29b1338b-a957-4c76-9b0c-84c9f25f18a0","status":200,"latency":34.775,"client_ip":"192.168.65.1","time":"2025-08-21T06:02:56Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/notes/29b1338b-a957-4c76-9b0c-84c9f25f18a0","status":200,"latency":40.865959,"client_ip":"192.168.65.1","time":"2025-08-21T06:08:37Z","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/notes/29b1338b-a957-4c76-9b0c-84c9f25f18a0","status":200,"latency":18.703333,"client_ip":"192.168.65.1","time":"2025-08-21T06:11:31Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":44.002875,"client_ip":"192.168.65.1","time":"2025-08-21T08:44:40Z","message":"Request handled"}
