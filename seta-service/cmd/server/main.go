@@ -4,6 +4,7 @@ import (
 	"seta/internal/app/server/routes"
 	"seta/internal/pkg/config"
 	"seta/internal/pkg/database"
+	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/logger"
 )
 
@@ -26,6 +27,9 @@ func main() {
 	}
 
 	defer sqlDB.Close()
+
+	// Initialize Kafka Producers
+	kafka.InitProducers()
 
 	// Set up the router
 	router := routes.SetupRouter(db, log)

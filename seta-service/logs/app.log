@@ -76,3 +76,27 @@
 {"level":"info","time":"2025-08-13T21:48:26Z","message":"Database connection successful."}
 {"level":"info","time":"2025-08-13T21:48:26Z","message":"Starting server on port 8080"}
 {"level":"info","method":"POST","path":"/api/assets/folders","status":201,"latency":49.43025,"client_ip":"192.168.65.1","time":"2025-08-13T21:49:57Z","message":"Request handled"}
+{"level":"info","time":"2025-08-14T12:36:19+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T12:36:19+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/users/import","status":200,"latency":19.120333,"client_ip":"::1","time":"2025-08-14T12:37:01+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-14T12:45:47+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T12:45:47+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/assets/folders","status":401,"latency":3.910417,"client_ip":"::1","time":"2025-08-14T12:49:41+07:00","message":"Request handled"}
+{"level":"info","time":"2025-08-14T12:55:11+07:00","message":"Database connection successful."}
+{"level":"info","time":"2025-08-14T12:55:11+07:00","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/users/import","status":401,"latency":9.137125,"client_ip":"::1","time":"2025-08-14T12:55:18+07:00","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/users/import","status":200,"latency":2012.479041,"client_ip":"::1","time":"2025-08-14T12:55:36+07:00","message":"Request handled"}
+{"level":"info","method":"GET","path":"/api/users/4cdf615e-5188-409f-88c2-0868432cac9b/assets","status":200,"latency":22.003833,"client_ip":"::1","time":"2025-08-14T14:14:24+07:00","message":"Request handled"}
+{"level":"fatal","error":"failed to connect to database: failed to connect to `user=huygdo database=seta_service_db`: 192.168.65.254:5432 (host.docker.internal): dial error: dial tcp 192.168.65.254:5432: connect: connection refused","time":"2025-08-18T18:09:27Z","message":"could not connect to database"}
+{"level":"info","time":"2025-08-18T18:12:01Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-18T18:12:01Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-20T20:18:29Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:18:29Z","message":"Starting server on port 8080"}
+{"level":"info","time":"2025-08-20T20:47:52Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:47:52Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":400,"latency":67.409084,"client_ip":"192.168.65.1","time":"2025-08-20T20:52:24Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":401,"latency":18.542083,"client_ip":"192.168.65.1","time":"2025-08-20T20:54:20Z","message":"Request handled"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":41.647417,"client_ip":"192.168.65.1","time":"2025-08-20T20:55:23Z","message":"Request handled"}
+{"level":"info","time":"2025-08-20T20:59:56Z","message":"Database connection successful."}
+{"level":"info","time":"2025-08-20T20:59:56Z","message":"Starting server on port 8080"}
+{"level":"info","method":"POST","path":"/api/teams","status":201,"latency":29.18475,"client_ip":"192.168.65.1","time":"2025-08-20T21:00:28Z","message":"Request handled"}
