@@ -2,18 +2,20 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"seta/internal/pkg/database"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/models"
 	"seta/internal/pkg/utils" // Import the new utils package
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// FolderController no longer embeds BaseController.
 // It now holds its own database connection.
 type FolderController struct {
 	db *gorm.DB
@@ -53,6 +55,12 @@ func (fc *FolderController) CreateFolder(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to create folder"})
 		return
 	}
+	
+	// Cache Write through
+	ctx := c.Request.Context()
+	cacheKey := "folder:" + folder.FolderID.String()
+	folderJSON, _ := json.Marshal(folder)
+	database.Rdb.Set(ctx, cacheKey, folderJSON, 24*time.Hour) //  
 
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType: "FOLDER_CREATED",
@@ -65,7 +73,7 @@ func (fc *FolderController) CreateFolder(c *gin.Context) {
 	c.JSON(http.StatusCreated, folder)
 }
 
-// GetFolder retrieves a single folder. Now simplified with utils and auth middleware.
+// GetFolder retrieves a single folder
 func (fc *FolderController) GetFolder(c *gin.Context) {
 	folderID, err := utils.GetUUIDFromParam(c, "folderId")
 	if err != nil {
@@ -73,11 +81,28 @@ func (fc *FolderController) GetFolder(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+	cacheKey := "folder:" + folderID.String()
 	var folder models.Folder
-	if err := fc.db.WithContext(c.Request.Context()).First(&folder, "folder_id = ?", folderID).Error; err != nil {
+
+	// Cache-Aside: Check cache first
+	cachedFolder, err := database.Rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Cache Hit
+		json.Unmarshal([]byte(cachedFolder), &folder)
+		c.JSON(http.StatusOK, folder)
+		return
+	}
+
+	// Cache Miss: Get from DB
+	if err := fc.db.WithContext(ctx).First(&folder, "folder_id = ?", folderID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Folder not found"})
 		return
 	}
+
+	// Populate cache
+	folderJSON, _ := json.Marshal(folder)
+	database.Rdb.Set(ctx, cacheKey, folderJSON, 24*time.Hour)
 
 	c.JSON(http.StatusOK, folder)
 }
@@ -86,7 +111,7 @@ type UpdateFolderInput struct {
 	Name string `json:"name" binding:"required"`
 }
 
-// UpdateFolder updates a folder's name. Simplified with utils and auth middleware.
+// UpdateFolder updates a folder's name
 func (fc *FolderController) UpdateFolder(c *gin.Context) {
 	folderID, err := utils.GetUUIDFromParam(c, "folderId")
 	if err != nil {
@@ -116,6 +141,12 @@ func (fc *FolderController) UpdateFolder(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update folder"})
 		return
 	}
+
+	// Write-Through: Update the cache
+	ctx := c.Request.Context()
+	cacheKey := "folder:" + folder.FolderID.String()
+	folderJSON, _ := json.Marshal(folder)
+	database.Rdb.Set(ctx, cacheKey, folderJSON, 24*time.Hour)
 
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType: "FOLDER_UPDATED",
@@ -149,7 +180,6 @@ func (fc *FolderController) DeleteFolder(c *gin.Context) {
 	}
 
 	tx := fc.db.WithContext(c.Request.Context()).Begin()
-	// ... (transaction logic remains the same)
 	if err := tx.Where("folder_id = ?", folder.FolderID).Delete(&models.Note{}).Error; err != nil {
 		tx.Rollback()
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to delete associated notes"})
@@ -187,7 +217,7 @@ type ShareFolderInput struct {
 	Access string    `json:"access" binding:"required"`
 }
 
-// ShareFolder shares a folder. Simplified with utils and auth middleware.
+// ShareFolder shares a folder
 func (fc *FolderController) ShareFolder(c *gin.Context) {
 	folderID, err := utils.GetUUIDFromParam(c, "folderId")
 	if err != nil {
@@ -230,7 +260,7 @@ func (fc *FolderController) ShareFolder(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// RevokeFolderSharing removes a user's access. Simplified with utils and auth middleware.
+// RevokeFolderSharing removes a user's access
 func (fc *FolderController) RevokeFolderSharing(c *gin.Context) {
 	folderID, err := utils.GetUUIDFromParam(c, "folderId")
 	if err != nil {
@@ -280,7 +310,7 @@ type CreateNoteInput struct {
 	Body  string `json:"body"`
 }
 
-// CreateNote creates a new note inside a folder. Simplified with utils and auth middleware.
+// CreateNote creates a new note inside a folder
 func (fc *FolderController) CreateNote(c *gin.Context) {
 	folderID, err := utils.GetUUIDFromParam(c, "folderId")
 	if err != nil {

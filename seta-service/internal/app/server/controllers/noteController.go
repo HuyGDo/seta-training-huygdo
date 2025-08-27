@@ -2,15 +2,19 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"seta/internal/pkg/database"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/models"
 	"seta/internal/pkg/utils" // Import the new utils package
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // NoteController no longer embeds BaseController.
@@ -31,11 +35,29 @@ func (nc *NoteController) GetNote(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+	cacheKey := "note:" + noteID.String()
 	var note models.Note
-	if err := nc.db.WithContext(c.Request.Context()).First(&note, "note_id = ?", noteID).Error; err != nil {
+
+	// 1. Check Cache First (Cache-Aside)
+	cachedNote, err := database.Rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Cache Hit: Unmarshal and return
+		if json.Unmarshal([]byte(cachedNote), &note) == nil {
+			c.JSON(http.StatusOK, note)
+			return
+		}
+	}
+
+	// Cache Miss: Get from DB
+	if err := nc.db.WithContext(ctx).First(&note, "note_id = ?", noteID).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusNotFound, Message: "Note not found"})
 		return
 	}
+
+	// 2. Populate Cache
+	noteJSON, _ := json.Marshal(note)
+	database.Rdb.Set(ctx, cacheKey, noteJSON, 24*time.Hour)
 
 	c.JSON(http.StatusOK, note)
 }
@@ -75,6 +97,12 @@ func (nc *NoteController) UpdateNote(c *gin.Context) {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to update note"})
 		return
 	}
+
+	// Write-Through: Update the cache
+	ctx := c.Request.Context()
+	cacheKey := "note:" + note.NoteID.String()
+	noteJSON, _ := json.Marshal(note)
+	database.Rdb.Set(ctx, cacheKey, noteJSON, 24*time.Hour)
 
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType: "NOTE_UPDATED",
@@ -124,6 +152,11 @@ func (nc *NoteController) DeleteNote(c *gin.Context) {
 		return
 	}
 
+	// Cache Invalidation (Write-Through for deletes)
+	ctx := c.Request.Context()
+	cacheKey := "note:" + noteID.String()
+	database.Rdb.Del(ctx, cacheKey)
+
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType: "NOTE_DELETED",
 		AssetType: "note",
@@ -172,10 +205,21 @@ func (nc *NoteController) ShareNote(c *gin.Context) {
 		Access: input.Access,
 	}
 
-	if err := nc.db.WithContext(c.Request.Context()).Create(&share).Error; err != nil {
+	if err := nc.db.WithContext(c.Request.Context()).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "note_id"}, {Name: "user_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{"access"}),
+		}).
+		Create(&share).Error; err != nil {
 		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to share note"})
 		return
 	}
+
+	// Write-Through: Immediately write to cache after DB success
+	ctx := c.Request.Context()
+	cacheKey := "note:" + note.NoteID.String()
+	noteJSON, _ := json.Marshal(note)
+	database.Rdb.Set(ctx, cacheKey, noteJSON, 24*time.Hour)
 
 	go kafka.ProduceAssetEvent(context.Background(), kafka.EventPayload{
 		EventType:    "NOTE_SHARED",

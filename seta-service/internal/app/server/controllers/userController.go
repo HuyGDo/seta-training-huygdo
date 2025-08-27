@@ -102,4 +102,10 @@ func (uc *UserController) GetUserAssets(c *gin.Context) {
 		"folders": folders,
 		"notes":   notes,
 	})
+
+	// 	The user is the direct owner of the note.
+
+		// The note has been explicitly shared with the user.
+
+		// The note is inside a folder that has been shared with the user.
 }

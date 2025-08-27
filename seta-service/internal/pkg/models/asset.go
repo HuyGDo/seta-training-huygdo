@@ -11,7 +11,6 @@ type Folder struct {
 	FolderID  uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"folderId"`
 	Name      string    `gorm:"not null" json:"name"`
 	OwnerID   uuid.UUID `gorm:"type:uuid" json:"ownerId"`
-	Owner     User      `gorm:"foreignKey:OwnerID" json:"owner"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -26,9 +25,7 @@ type Note struct {
 	Title     string    `gorm:"not null" json:"title"`
 	Body      string    `json:"body"`
 	FolderID  uuid.UUID `gorm:"type:uuid" json:"folderId"`
-	Folder    Folder    `gorm:"foreignKey:FolderID" json:"folder"`
 	OwnerID   uuid.UUID `gorm:"type:uuid" json:"ownerId"`
-	Owner     User      `gorm:"foreignKey:OwnerID" json:"owner"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }

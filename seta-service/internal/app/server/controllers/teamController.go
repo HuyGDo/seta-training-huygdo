@@ -3,10 +3,12 @@ package controllers
 import (
 	"context"
 	"net/http"
+	"seta/internal/pkg/database"
 	"seta/internal/pkg/errorHandling"
 	"seta/internal/pkg/kafka"
 	"seta/internal/pkg/models"
-	"seta/internal/pkg/utils" // Import the new utils package
+	"seta/internal/pkg/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -256,10 +258,35 @@ func (tc *TeamController) GetTeamAssets(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+	cacheKey := "team:" + teamID.String() + ":members"
 	var memberIDs []uuid.UUID
-	if err := tc.db.Model(&models.TeamMember{}).Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
-		_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve team members"})
-		return
+
+	// 1. Check Cache First (Cache-Aside)
+	cachedMemberIDs, err := database.Rdb.SMembers(ctx, cacheKey).Result()
+	if err == nil && len(cachedMemberIDs) > 0 {
+		// Cache Hit
+		for _, idStr := range cachedMemberIDs {
+			id, _ := uuid.Parse(idStr)
+			memberIDs = append(memberIDs, id)
+		}
+	} else {
+		// Cache Miss
+		if err := tc.db.Model(&models.TeamMember{}).Where("team_id = ?", teamID).Pluck("user_id", &memberIDs).Error; err != nil {
+			_ = c.Error(&errorHandling.CustomError{Code: http.StatusInternalServerError, Message: "Failed to retrieve team members"})
+			return
+		}
+
+		// 4. Populate Cache
+		if len(memberIDs) > 0 {
+			// Convert UUIDs to strings for Redis
+			stringIDs := make([]interface{}, len(memberIDs))
+			for i, id := range memberIDs {
+				stringIDs[i] = id.String()
+			}
+			database.Rdb.SAdd(ctx, cacheKey, stringIDs...)
+			database.Rdb.Expire(ctx, cacheKey, 24*time.Hour) // Set expiration
+		}
 	}
 
 	if len(memberIDs) == 0 {

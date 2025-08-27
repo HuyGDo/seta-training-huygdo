@@ -14,7 +14,6 @@ import (
 func GetUserUUIDFromContext(c *gin.Context) (uuid.UUID, error) {
 	userIDStr, exists := c.Get("userId")
 	if !exists {
-		// Return a specific error type that your error middleware can handle
 		return uuid.Nil, &errorHandling.CustomError{
 			Code:    http.StatusUnauthorized,
 			Message: "User not authenticated",

@@ -28,6 +28,10 @@ func main() {
 
 	defer sqlDB.Close()
 
+	if err := database.ConnectRedis(log); err != nil {
+		log.Fatal().Err(err).Msg("could not connect to Redis")
+	}
+	
 	// Initialize Kafka Producers
 	kafka.InitProducers()
 
